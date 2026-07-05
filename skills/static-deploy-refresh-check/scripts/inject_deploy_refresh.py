@@ -70,6 +70,17 @@ def build_snippet(marker: str, check_param: str, version_param: str, storage_pre
         return (hash >>> 0).toString(36);
       }}
 
+      function cleanDeployVersionParam() {{
+        try {{
+          var url = new URL(location.href);
+          if (!url.searchParams.has({version_param_js})) return;
+          url.searchParams.delete({version_param_js});
+          if (history && history.replaceState) {{
+            history.replaceState(history.state, document.title, url.toString());
+          }}
+        }} catch (_error) {{}}
+      }}
+
       function refreshOnce(version) {{
         try {{
           if (sessionStorage.getItem(storageKey) === version) return;
@@ -100,6 +111,7 @@ def build_snippet(marker: str, check_param: str, version_param: str, storage_pre
       }}
 
       function start() {{
+        cleanDeployVersionParam();
         setTimeout(checkForDeployUpdate, 1200);
       }}
 
