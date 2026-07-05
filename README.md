@@ -13,15 +13,47 @@
 
 既存の Sakura 運用で使った安全な型を、公開できる形に抽象化しています。実ドメイン、実ユーザー名、サーバーパス、メールアドレス、パスワード、運用ログは含めません。
 
-主なゴールは次の 5 つです。
+主なゴールは次の 5 つです。どの skill を使うかは、「今なにを作りたいか」で選びます。
 
-| Skill | 目的 |
-| --- | --- |
-| `sakura-ssh-deploy-setup` | Codex が Sakura SSH/SFTP 配布を自動実行できる状態まで整える |
-| `github-repo-publish-setup` | Codex が GitHub 新規リポジトリ作成と継続的な公開運用を整える |
-| `sakura-mailbox-setup` | Sakura の実メールボックス作成または存在確認、送信元、DNS、送信テストを整える |
-| `sakura-auth-site-setup` | ユーザー、ロール、登録確認メール、cron 失敗通知、ページ権限を持つサイトを構築する |
-| `static-deploy-refresh-check` | 新規・既存の静的ページに、公開後の古い JS/CSS を一度だけ自動更新し、古い assets の保留・削除と live data 保護を整える |
+### 1. Sakura への自動デプロイ準備
+
+`sakura-ssh-deploy-setup`
+
+- **困りごと:** Sakura Server へサイトをアップロードしたいが、毎回パスワード入力や手作業の SFTP をしたくない。
+- **Codex がすること:** Sakura の接続情報をローカル秘密ファイルに保存し、SSH/SFTP helper、アップロード許可リスト、`.gitignore`、確認手順を作る。
+- **できあがる状態:** Codex が以後のデプロイで、許可されたファイルだけを Sakura にアップロードできる。秘密情報は Git に入らない。
+
+### 2. GitHub 公開運用の準備
+
+`github-repo-publish-setup`
+
+- **困りごと:** 新しいプロジェクトを GitHub に公開し、以後も Codex から安全に commit/push したい。
+- **Codex がすること:** GitHub リポジトリ作成、remote 設定、初回 commit/push、branch 運用ルール、公開時の注意点を整える。認証コードや承認だけユーザーが処理する。
+- **できあがる状態:** プロジェクトが GitHub に載り、以後の更新も intended branch に公開できる。
+
+### 3. Sakura メール送信元の準備
+
+`sakura-mailbox-setup`
+
+- **困りごと:** サイトから登録確認メール、設定確認メール、cron 失敗通知を送りたい。
+- **Codex がすること:** Sakura の実メールボックスを作成または確認し、送信元、envelope sender、DNS、PHP `mail()` / sendmail、メールヘッダー、テスト送信を確認する。
+- **できあがる状態:** 存在する Sakura メールアドレスを送信元にした通知メール基盤ができる。管理画面には送信元設定を出さず、通知先だけ編集する。
+
+### 4. ログイン・ユーザー権限付きサイトの構築
+
+`sakura-auth-site-setup`
+
+- **困りごと:** Sakura 上のサイトにログイン、ユーザーグループ、ページ権限、登録確認メール、管理画面を追加したい。
+- **Codex がすること:** ユーザー保存場所、password hash、メール確認 token、ロール別ページ権限、管理画面、cron 失敗通知設定をサイトに組み込む。
+- **できあがる状態:** 登録確認後のユーザー、staff/admin などの権限、保護ページ、管理画面を持つアカウント制サイトになる。
+
+### 5. 静的ページ公開後の表示崩れ・古いファイル対策
+
+`static-deploy-refresh-check`
+
+- **困りごと:** 新ページ公開後に古い CSS/JS が残る。Sakura 上に古い assets が増える。cron が作る JSON や HTML 注入を上書きしたくない。
+- **Codex がすること:** ページに一度だけ動く更新チェックを入れ、古い hashed assets は「現在 + 直前」だけ残す運用にし、live data と cron 注入済み HTML を保護する。
+- **できあがる状態:** ユーザーに手動リロードを頼まず新しい表示へ移行でき、Sakura 上の不要な古い assets も安全に整理できる。
 
 ## 特徴
 
