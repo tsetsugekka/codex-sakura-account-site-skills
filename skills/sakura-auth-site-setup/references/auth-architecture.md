@@ -8,6 +8,8 @@ Recommended private files:
 /home/ACCOUNT/private_auth/preferences/
 ```
 
+`site_settings.json` is for admin-editable runtime choices only, such as `cronFailureEmail`. Do not store site name, public base URL, From address, From display name, envelope sender, mailbox passwords, SMTP passwords, or Sakura control-panel credentials in it. Put infrastructure mail settings in environment variables or `config.local.php`.
+
 Recommended API endpoints:
 
 ```text
@@ -51,7 +53,8 @@ Rules:
 - Use file locks and temporary-file-plus-rename writes when the lightweight store is JSON.
 - Make the bootstrap admin fixed full access and prevent deleting or downgrading it through the UI.
 - Keep registration closed by default; when opened, create a disabled/pending user or assign a pending group until email verification succeeds.
-- After verification, move the user to the normal default group such as `user` unless the project explicitly requires an admin approval step.
+- After verification, move the user to `user` unless the user explicitly requested another default role or an admin approval step.
+- Do not choose `demo` as the verified default role unless the project owner explicitly requested it.
 - Role names are project configuration, not universal UI copy. A common pattern is `unverified` or `pending` for pre-verification registrations, `user` for normal verified users, and `admin` for fixed full access.
 
 Role catalog pattern:

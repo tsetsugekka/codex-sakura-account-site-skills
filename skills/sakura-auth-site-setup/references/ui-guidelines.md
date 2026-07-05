@@ -21,6 +21,7 @@ Avoid:
 - visible explanatory text about how the app works,
 - changing public navigation unless requested.
 - hardcoding one project's product names, role labels, page names, domains, or brand copy into reusable skill templates.
+- exposing infrastructure mail settings in admin UI, including site name, public URL, From address, From display name, or envelope sender.
 
 Form spacing notes:
 
@@ -35,3 +36,4 @@ Validation:
 3. Check that text is not clipped or touching borders.
 4. Check desktop and narrow viewport.
 5. Confirm protected and public pages behave as documented.
+6. Confirm cron notification UI only contains the failure-recipient email and optional test-send action.

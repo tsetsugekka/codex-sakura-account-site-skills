@@ -1,22 +1,22 @@
 # Japanese Mail Templates
 
-## Settings Confirmation
+## Cron Failure Recipient Confirmation
 
 Subject:
 
 ```text
-通知設定が完了しました
+cron失敗通知先を設定しました
 ```
 
 Body:
 
 ```text
-Web サイトの通知メールアドレスを設定しました。
+cron 失敗通知先メールアドレスを設定しました。
 
 今後は、対象の処理が失敗した場合のみ、このメールアドレスに通知します。
 成功時、対象処理なし、ロックによるスキップ時には送信しません。
 
-この設定に心当たりがない場合は、管理画面で通知メールアドレスを空にしてください。
+この設定に心当たりがない場合は、管理画面で cron 失敗通知先を空にしてください。
 ```
 
 ## Account Verification
@@ -56,4 +56,3 @@ Body:
 
 詳細と直近ログを下に記載します。
 ```
-

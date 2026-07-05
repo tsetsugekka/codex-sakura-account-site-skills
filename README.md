@@ -19,7 +19,7 @@
 | --- | --- |
 | `sakura-ssh-deploy-setup` | Sakura Server への SSH/SFTP 配布を安全に準備する |
 | `github-repo-publish-setup` | GitHub 新規リポジトリと継続的な Codex 公開運用を整える |
-| `sakura-mailbox-setup` | Sakura の実メールボックス、送信元、DNS、送信テストを整える |
+| `sakura-mailbox-setup` | Sakura の実メールボックス作成または存在確認、送信元、DNS、送信テストを整える |
 | `sakura-auth-site-setup` | ユーザー、ロール、登録確認メール、cron 失敗通知、ページ権限を持つサイトを構築する |
 
 ## 特徴
@@ -77,6 +77,9 @@ Use $sakura-auth-site-setup to add Japanese login, user groups, registration ema
 - 実パスワードやトークンは Git に入れない。
 - `LOCAL_DEPLOY_SECRETS.md` などのローカル秘密ファイルは `.gitignore` に入れる。
 - メール送信元は存在する実メールボックスを使う。
+- 新規メールボックスが必要な依頼では、Sakura コントロールパネルで作成または既存 mailbox の存在確認が終わるまで「完了」と言わない。
+- サイト名、公開 URL、送信元メール、送信元名、envelope sender はサーバー側の私密設定に置き、管理画面で編集させない。
+- 管理画面で編集できるメール項目は、原則として cron 失敗通知の受信先だけにする。
 - ユーザー DB、設定ファイル、cron ログは Web 公開ディレクトリの外に置く。
 - 登録確認 token は平文保存せず、hash と有効期限だけを保存する。
 - 公開ページは、サイドバーの表示位置に関係なく、ロール権限設定に入れない。
