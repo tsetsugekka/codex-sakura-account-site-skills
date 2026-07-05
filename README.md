@@ -17,8 +17,8 @@
 
 | Skill | 目的 |
 | --- | --- |
-| `sakura-ssh-deploy-setup` | Sakura Server への SSH/SFTP 配布を安全に準備する |
-| `github-repo-publish-setup` | GitHub 新規リポジトリと継続的な Codex 公開運用を整える |
+| `sakura-ssh-deploy-setup` | Codex が Sakura SSH/SFTP 配布を自動実行できる状態まで整える |
+| `github-repo-publish-setup` | Codex が GitHub 新規リポジトリ作成と継続的な公開運用を整える |
 | `sakura-mailbox-setup` | Sakura の実メールボックス作成または存在確認、送信元、DNS、送信テストを整える |
 | `sakura-auth-site-setup` | ユーザー、ロール、登録確認メール、cron 失敗通知、ページ権限を持つサイトを構築する |
 
@@ -29,6 +29,9 @@
 
 - **Sakura Server 前提の実務フロー**  
   SSH/SFTP、Sakura コントロールパネル、sendmail、メールボックス、非公開データ配置を前提にしています。
+
+- **Codex automation-first**
+  Codex が実行できる作業は Codex が行います。ユーザーの役割は、GitHub の認証コード入力、Sakura のログイン/2FA、Sakura SSH ユーザー名・パスワードの安全入力など、本人しか扱えない入力に限ります。
 
 - **許可リスト型のデプロイ**
   リポジトリ全体や `dist` 全体を再帰アップロードせず、SFTP manifest に書いたファイルだけを配布します。
@@ -77,7 +80,7 @@ Use $sakura-auth-site-setup to add Japanese login, user groups, registration ema
 - 実パスワードやトークンは Git に入れない。
 - `LOCAL_DEPLOY_SECRETS.md` などのローカル秘密ファイルは `.gitignore` に入れる。
 - メール送信元は存在する実メールボックスを使う。
-- 新規メールボックスが必要な依頼では、Sakura コントロールパネルで作成または既存 mailbox の存在確認が終わるまで「完了」と言わない。
+- 新規メールボックスが必要な依頼では、ユーザーが browser/computer use を許可しているなら Codex が Sakura コントロールパネルで作成を進める。作成または既存 mailbox の存在確認が終わるまで「完了」と言わない。
 - サイト名、公開 URL、送信元メール、送信元名、envelope sender はサーバー側の私密設定に置き、管理画面で編集させない。
 - 管理画面で編集できるメール項目は、原則として cron 失敗通知の受信先だけにする。
 - ユーザー DB、設定ファイル、cron ログは Web 公開ディレクトリの外に置く。

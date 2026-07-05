@@ -1,6 +1,6 @@
 ---
 name: github-repo-publish-setup
-description: Prepare a new GitHub repository and ongoing Codex publishing workflow. Use when Codex needs to guide a user through creating a GitHub repo, configuring remotes, committing to the intended branch, pushing without repeated confirmations after scoped approval, and documenting safe publish discipline without leaking secrets.
+description: Prepare a new GitHub repository and ongoing Codex publishing workflow. Use when Codex needs to create a GitHub repo for the user with gh or browser automation, have the user handle only GitHub verification codes or authorization prompts, configure remotes, commit to the intended branch, push without repeated confirmations after scoped approval, and document safe publish discipline without leaking secrets.
 ---
 
 # GitHub Repo Publish Setup
@@ -9,13 +9,15 @@ description: Prepare a new GitHub repository and ongoing Codex publishing workfl
 
 Create or connect a GitHub repository and define a disciplined publish workflow for future Codex sessions.
 
+Codex should create the repository when the user asks. The user should only need to complete GitHub authentication steps that cannot be delegated, such as entering a browser/device verification code or approving an authorization prompt.
+
 ## Workflow
 
 1. Confirm the repository name, visibility, license, and intended default branch.
-2. Check whether `gh` is installed and authenticated. If not, guide the user through `gh auth login`.
+2. Check whether `gh` is installed and authenticated. If not, start `gh auth login` or the browser auth flow; have the user enter only the verification code or approve the GitHub prompt.
 3. Initialize Git only if the target directory is not already a repository.
 4. Add a `.gitignore` before the first commit.
-5. Create the GitHub repository with `gh repo create` or ask the user to create it in the browser.
+5. Create the GitHub repository with `gh repo create`, or use browser automation when `gh` is unavailable. Do not ask the user to create the repo manually unless both automation paths are unavailable or denied.
 6. Set `origin` and default branch.
 7. Commit only intended files.
 8. Push to the intended target branch.
@@ -47,8 +49,8 @@ python3 /path/to/skills/github-repo-publish-setup/scripts/write_publish_policy.p
 ## Safety Rules
 
 - Do not print GitHub tokens.
+- Do not make the user create the GitHub repository manually when `gh` or browser automation is available.
 - Do not commit `.env`, local secret files, browser cookies, deployment credentials, or generated private data.
 - Before staging, run `git status --short`.
 - Before committing, run `git branch --show-current`.
 - If the worktree contains unrelated changes, ask before staging them.
-

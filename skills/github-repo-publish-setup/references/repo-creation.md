@@ -1,5 +1,7 @@
 # GitHub Repo Creation
 
+Codex should create the repository. The user should only handle GitHub authentication actions that cannot be delegated, such as entering a device/browser code or approving an OAuth prompt.
+
 Recommended commands:
 
 ```bash
@@ -25,3 +27,4 @@ Before creation:
 - Confirm whether generated deploy files should be committed.
 - Confirm whether the repo may contain production artifacts.
 
+If `gh` is not authenticated, run `gh auth login` and guide the user through the displayed verification code flow. If `gh` is unavailable but browser automation is authorized, create the repository in GitHub's web UI. Only fall back to asking the user to create the repository manually after those paths are unavailable or denied.

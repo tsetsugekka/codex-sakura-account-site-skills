@@ -1,6 +1,6 @@
 ---
 name: sakura-ssh-deploy-setup
-description: Prepare safe SSH and SFTP deployment for Sakura Server projects. Use when Codex needs to guide a user through creating a local-only Sakura login secret file, generating reusable SSH/SFTP helper scripts, whitelist upload manifests, .gitignore rules, and scoped approvals so future Codex deploys can upload without repeated confirmation.
+description: Prepare safe SSH and SFTP deployment for Sakura Server projects. Use when Codex needs to create a local-only Sakura login secret file through secure user input, generate reusable SSH/SFTP helper scripts, whitelist upload manifests, .gitignore rules, and scoped approvals so future Codex deploys can upload without repeated confirmation.
 ---
 
 # Sakura SSH Deploy Setup
@@ -9,10 +9,12 @@ description: Prepare safe SSH and SFTP deployment for Sakura Server projects. Us
 
 Set up a Sakura Server project so Codex can deploy through SSH/SFTP using a local secret file that is never committed.
 
+Codex should do the setup work. The user should only need to provide Sakura host/user/password through a secure prompt or equivalent secret-entry UI.
+
 ## Workflow
 
 1. Inspect the repository and confirm the intended deploy target, public web root, and private job/data paths.
-2. Create or update a local-only `LOCAL_DEPLOY_SECRETS.md` template. Never fill real secrets into tracked files.
+2. Create or update a local-only `LOCAL_DEPLOY_SECRETS.md` from secure user input when credentials are needed. Never put real secrets in tracked files or chat output.
 3. Add `LOCAL_DEPLOY_SECRETS.md` to `.gitignore`.
 4. Generate helper scripts that read the local secret file. Common layouts are:
    - `scripts/sftp-with-local-secret.expect`
@@ -20,7 +22,7 @@ Set up a Sakura Server project so Codex can deploy through SSH/SFTP using a loca
    - or a scoped deploy folder such as `deploy/scripts/sftp-with-local-secret.expect`
    - and `deploy/scripts/ssh-run-with-local-secret.expect`
 5. Create a whitelist SFTP manifest template. The manifest must list exact local-to-remote uploads; do not use recursive whole-repository uploads.
-6. Ask the user to fill the local secret file manually or through a secure local workflow.
+6. Use a secure prompt/popup or the helper script's `--write-local-secret` mode so the user only enters Sakura host/user/password; Codex writes the ignored local secret file.
 7. Run a harmless `ssh` check such as `pwd` or `ls -la`.
 8. Run a harmless `sftp` check such as `ls`.
 9. If the environment supports persistent command approvals, ask the user once for narrowly scoped prefixes:
@@ -41,12 +43,20 @@ Do not claim that confirmations can be bypassed. Phrase it as: after the user ex
 
 ## Helper Script
 
-Use `scripts/create_deploy_helpers.py` to scaffold the local secret template, `.gitignore` entry, and helper scripts into the target repository.
+Use `scripts/create_deploy_helpers.py` to scaffold the local secret template, `.gitignore` entry, helper scripts, and optionally the ignored local secret file into the target repository.
 
 Run from the target repository root:
 
 ```bash
 python3 /path/to/skills/sakura-ssh-deploy-setup/scripts/create_deploy_helpers.py --project-root .
+```
+
+To create the ignored local secret file through secure prompts:
+
+```bash
+python3 /path/to/skills/sakura-ssh-deploy-setup/scripts/create_deploy_helpers.py \
+  --project-root . \
+  --write-local-secret
 ```
 
 For projects that keep deploy helpers under a scoped deploy folder, use:
@@ -67,5 +77,6 @@ python3 /path/to/skills/sakura-ssh-deploy-setup/scripts/create_deploy_helpers.py
 
 - Never print passwords, control panel credentials, mailbox passwords, API tokens, or full secret file contents.
 - Never write real secrets into `SKILL.md`, README, scripts, examples, deploy manifests, docs, Git commits, or command logs.
+- Do not ask the user to manually edit `LOCAL_DEPLOY_SECRETS.md` when a secure prompt or equivalent secret-entry UI is available.
 - Require deploy manifests that list exact local and remote paths.
 - Do not upload or overwrite production data unless the user explicitly asks for that exact data action.

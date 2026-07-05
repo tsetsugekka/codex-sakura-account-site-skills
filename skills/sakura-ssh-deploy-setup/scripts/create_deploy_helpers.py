@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import getpass
 from pathlib import Path
 
 SECRET_TEMPLATE = """# Sakura deploy secrets
@@ -136,6 +137,27 @@ def ensure_gitignore(root: Path) -> None:
         path.write_text(current + suffix + "LOCAL_DEPLOY_SECRETS.md\n", encoding="utf-8")
         print(f"updated {path}")
 
+def write_local_secret(root: Path, force: bool = False) -> None:
+    path = root / "LOCAL_DEPLOY_SECRETS.md"
+    if path.exists() and not force:
+        print(f"skip existing {path}")
+        return
+    host = input("Sakura SSH host (example: your-server.sakura.ne.jp): ").strip()
+    user = input("Sakura SSH user: ").strip()
+    password = getpass.getpass("Sakura SSH password: ")
+    if not host or not user or not password:
+        raise SystemExit("host, user, and password are required")
+    path.write_text(
+        "# Sakura deploy secrets\n"
+        "# Local only. Never commit this file.\n"
+        f"host: {host}\n"
+        f"user: {user}\n"
+        f"password: {password}\n",
+        encoding="utf-8",
+    )
+    path.chmod(0o600)
+    print(f"wrote local secret {path}")
+
 def safe_child_path(root: Path, value: str) -> Path:
     rel = Path(value)
     if rel.is_absolute():
@@ -152,6 +174,8 @@ def main() -> None:
     parser.add_argument("--project-root", default=".")
     parser.add_argument("--helper-dir", default="scripts", help="Helper script directory relative to project root, for example scripts or deploy/scripts.")
     parser.add_argument("--deploy-dir", default="_deploy", help="SFTP manifest directory relative to project root, for example _deploy or deploy/_deploy.")
+    parser.add_argument("--write-local-secret", action="store_true", help="Prompt for Sakura SSH credentials and write ignored LOCAL_DEPLOY_SECRETS.md.")
+    parser.add_argument("--force-local-secret", action="store_true", help="Overwrite existing LOCAL_DEPLOY_SECRETS.md when used with --write-local-secret.")
     args = parser.parse_args()
     root = Path(args.project_root).resolve()
     helper_dir = safe_child_path(root, args.helper_dir)
@@ -161,7 +185,10 @@ def main() -> None:
     write_file(deploy_dir / "SFTP_UPLOAD.example.txt", MANIFEST_TEMPLATE)
     write_file(helper_dir / "sftp-with-local-secret.expect", SFTP_SCRIPT, executable=True)
     write_file(helper_dir / "ssh-run-with-local-secret.expect", SSH_SCRIPT, executable=True)
-    print("Create LOCAL_DEPLOY_SECRETS.md locally from the example and fill real values outside Git.")
+    if args.write_local_secret:
+        write_local_secret(root, force=args.force_local_secret)
+    else:
+        print("Run again with --write-local-secret to create LOCAL_DEPLOY_SECRETS.md through secure prompts.")
 
 if __name__ == "__main__":
     main()
