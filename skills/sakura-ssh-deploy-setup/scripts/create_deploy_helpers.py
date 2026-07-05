@@ -18,15 +18,40 @@ MANIFEST_TEMPLATE = """# SFTP upload manifest example.
 # put dist/assets/app.12345678.js /home/your-account/www/assets/app.12345678.js
 # put dist/assets/app.12345678.css /home/your-account/www/assets/app.12345678.css
 # put dist/index.html /home/your-account/www/index.html
+
+# REQUIRED AFTER VERIFYING A STATIC LIVE PAGE WITH HASHED ASSETS:
+# 1. Dry-run old asset cleanup:
+#    node scripts/cleanup-remote-assets.mjs <target>
+# 2. If the delete list only contains older hash assets:
+#    node scripts/cleanup-remote-assets.mjs <target> --apply
+# 3. Final verification:
+#    node scripts/cleanup-remote-assets.mjs <target>
+#    It must report delete=0.
 """
 
 EXPECT_COMMON = r'''#!/usr/bin/expect -f
 set timeout 180
 set script_dir [file dirname [info script]]
-set repo_root [file normalize [file join $script_dir ".."]]
-set secret_path [file join $repo_root "LOCAL_DEPLOY_SECRETS.md"]
 
-if {![file exists $secret_path]} {
+proc find_secret_path {start_dir} {
+  set dir [file normalize $start_dir]
+  for {set i 0} {$i < 6} {incr i} {
+    set candidate [file join $dir "LOCAL_DEPLOY_SECRETS.md"]
+    if {[file exists $candidate]} {
+      return $candidate
+    }
+    set parent [file dirname $dir]
+    if {$parent eq $dir} {
+      break
+    }
+    set dir $parent
+  }
+  return ""
+}
+
+set secret_path [find_secret_path $script_dir]
+
+if {$secret_path eq "" || ![file exists $secret_path]} {
   puts "Missing LOCAL_DEPLOY_SECRETS.md"
   exit 2
 }
@@ -111,16 +136,31 @@ def ensure_gitignore(root: Path) -> None:
         path.write_text(current + suffix + "LOCAL_DEPLOY_SECRETS.md\n", encoding="utf-8")
         print(f"updated {path}")
 
+def safe_child_path(root: Path, value: str) -> Path:
+    rel = Path(value)
+    if rel.is_absolute():
+        raise SystemExit(f"path must be relative to project root: {value}")
+    target = (root / rel).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError:
+        raise SystemExit(f"path escapes project root: {value}")
+    return target
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-root", default=".")
+    parser.add_argument("--helper-dir", default="scripts", help="Helper script directory relative to project root, for example scripts or deploy/scripts.")
+    parser.add_argument("--deploy-dir", default="_deploy", help="SFTP manifest directory relative to project root, for example _deploy or deploy/_deploy.")
     args = parser.parse_args()
     root = Path(args.project_root).resolve()
+    helper_dir = safe_child_path(root, args.helper_dir)
+    deploy_dir = safe_child_path(root, args.deploy_dir)
     write_file(root / "LOCAL_DEPLOY_SECRETS.example.md", SECRET_TEMPLATE)
     ensure_gitignore(root)
-    write_file(root / "_deploy/SFTP_UPLOAD.example.txt", MANIFEST_TEMPLATE)
-    write_file(root / "scripts/sftp-with-local-secret.expect", SFTP_SCRIPT, executable=True)
-    write_file(root / "scripts/ssh-run-with-local-secret.expect", SSH_SCRIPT, executable=True)
+    write_file(deploy_dir / "SFTP_UPLOAD.example.txt", MANIFEST_TEMPLATE)
+    write_file(helper_dir / "sftp-with-local-secret.expect", SFTP_SCRIPT, executable=True)
+    write_file(helper_dir / "ssh-run-with-local-secret.expect", SSH_SCRIPT, executable=True)
     print("Create LOCAL_DEPLOY_SECRETS.md locally from the example and fill real values outside Git.")
 
 if __name__ == "__main__":

@@ -26,3 +26,6 @@ Validation:
 - Confirm helper names match the project convention:
   - `scripts/sftp-with-local-secret.expect`
   - `scripts/ssh-run-with-local-secret.expect`
+  - or, for projects that isolate deploy tooling, `deploy/scripts/sftp-with-local-secret.expect`
+  - and `deploy/scripts/ssh-run-with-local-secret.expect`
+- Helper scripts should locate `LOCAL_DEPLOY_SECRETS.md` by walking upward from their own directory so nested helper folders still work.

@@ -12,6 +12,7 @@ Recommended role model:
 
 ```json
 [
+  {"id": "unverified", "name": "未認証", "pages": [], "system": true},
   {"id": "user", "name": "User", "pages": [], "system": true},
   {"id": "staff", "name": "Staff", "pages": [], "system": true},
   {"id": "admin", "name": "管理者", "pages": ["*"], "system": true}
@@ -36,7 +37,7 @@ For pages with feature levels, define the permission keys on the page catalog, n
 
 The admin UI should offer `権限なし` plus the page-defined options for each role. Do not save page permissions directly on users.
 
-Protected page entrypoints should inject a small runtime contract into the page:
+Protected page entrypoints should inject a small runtime contract into the page. The global name must be project-scoped and configurable; examples include `window.SITE_AUTH`, `window.ACCOUNT_AUTH`, or another project-specific name.
 
 ```js
 window.SITE_AUTH = {
@@ -52,6 +53,8 @@ window.SITE_AUTH = {
 ```
 
 Page code must read `pagePermission`. It must not infer behavior from role names. If the page has its own API, the API must enforce the same permission server-side.
+
+When handing work to another page-building thread, pass the permission contract document and the exact page permission keys. The page thread should not invent global permission levels.
 
 Before changing page access:
 

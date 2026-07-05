@@ -40,7 +40,7 @@
   認証画面、管理画面、通知メールは日本語を標準にします。必要に応じて多言語化できます。
 
 - **既存サイトの雰囲気を尊重**  
-  管理画面は既存サイトの色、余白、角丸、サイドバー、タイポグラフィに寄せる方針です。
+  管理画面は既存サイトの色、余白、角丸、ナビゲーション、ヘッダー、タイポグラフィに寄せる方針です。
 
 ## 推奨リポジトリ構成
 
@@ -62,6 +62,10 @@ Use $sakura-ssh-deploy-setup to prepare password-safe SSH/SFTP deployment for a 
 
 ```text
 Use $sakura-mailbox-setup to create a real notification sender mailbox and verify website mail delivery.
+```
+
+```text
+Use $github-repo-publish-setup to create a GitHub repository and set up safe future Codex commits and pushes.
 ```
 
 ```text

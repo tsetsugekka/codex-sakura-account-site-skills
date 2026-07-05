@@ -4,7 +4,7 @@ Admin/supervisor screens should feel like the existing site, not a generic contr
 
 Use:
 
-- existing sidebar and header where possible,
+- the existing site navigation/header pattern where possible,
 - compact cards for individual tools,
 - 8px to 10px radius unless the site already uses another radius,
 - restrained colors from the current site,
@@ -20,6 +20,7 @@ Avoid:
 - oversized headings inside compact panels,
 - visible explanatory text about how the app works,
 - changing public navigation unless requested.
+- hardcoding one project's product names, role labels, page names, domains, or brand copy into reusable skill templates.
 
 Form spacing notes:
 

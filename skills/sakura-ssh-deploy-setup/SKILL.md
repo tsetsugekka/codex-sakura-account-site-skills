@@ -14,9 +14,11 @@ Set up a Sakura Server project so Codex can deploy through SSH/SFTP using a loca
 1. Inspect the repository and confirm the intended deploy target, public web root, and private job/data paths.
 2. Create or update a local-only `LOCAL_DEPLOY_SECRETS.md` template. Never fill real secrets into tracked files.
 3. Add `LOCAL_DEPLOY_SECRETS.md` to `.gitignore`.
-4. Generate helper scripts that read the local secret file:
+4. Generate helper scripts that read the local secret file. Common layouts are:
    - `scripts/sftp-with-local-secret.expect`
    - `scripts/ssh-run-with-local-secret.expect`
+   - or a scoped deploy folder such as `deploy/scripts/sftp-with-local-secret.expect`
+   - and `deploy/scripts/ssh-run-with-local-secret.expect`
 5. Create a whitelist SFTP manifest template. The manifest must list exact local-to-remote uploads; do not use recursive whole-repository uploads.
 6. Ask the user to fill the local secret file manually or through a secure local workflow.
 7. Run a harmless `ssh` check such as `pwd` or `ls -la`.
@@ -33,8 +35,9 @@ Do not claim that confirmations can be bypassed. Phrase it as: after the user ex
 - Use whitelist manifests for SFTP deploys.
 - Do not upload the full repository, full `dist`, `.env`, databases, user data, cache directories, upload directories, or `node_modules`.
 - For static frontend builds, upload new hashed assets before the live `index.html`.
+- For PHP/account-site deploys without hashed frontend assets, old asset cleanup may be not applicable; do not force cleanup against non-hash shared assets such as `app.css`.
 - Put private account data, cron state, logs, and settings outside the public web root.
-- Run cleanup only after live verification, and only delete old generated hash `.js`, `.css`, or `.map` assets one file at a time.
+- Run cleanup only after live verification, and only delete old generated hash `.js`, `.css`, or `.map` assets one file at a time. Final dry-run must report `delete=0`.
 
 ## Helper Script
 
@@ -44,6 +47,15 @@ Run from the target repository root:
 
 ```bash
 python3 /path/to/skills/sakura-ssh-deploy-setup/scripts/create_deploy_helpers.py --project-root .
+```
+
+For projects that keep deploy helpers under a scoped deploy folder, use:
+
+```bash
+python3 /path/to/skills/sakura-ssh-deploy-setup/scripts/create_deploy_helpers.py \
+  --project-root . \
+  --helper-dir deploy/scripts \
+  --deploy-dir deploy/_deploy
 ```
 
 ## References

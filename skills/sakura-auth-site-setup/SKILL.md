@@ -16,10 +16,11 @@ Add a production-ready account system to a Sakura-hosted website while preservin
 - Passwords stored with a modern password hash, never plaintext.
 - Registration disabled by default unless explicitly enabled.
 - Registration requires email verification before login.
-- Verified new users default to the `user` group.
+- New registrations stay disabled or in a pending group until email verification.
+- Verified users default to the project's normal user group, commonly `user`, unless the project explicitly requires admin approval.
 - Role groups control page access.
 - Page permissions are saved on roles/user groups, not individual users.
-- Protected page entrypoints inject a server-evaluated page permission value for the page.
+- Protected page entrypoints inject a server-evaluated page permission value for the page using a project-scoped runtime global.
 - Page UI and page APIs enforce page-defined permission keys; do not infer behavior from global role names.
 - Admin/supervisor page edits users, roles, page permissions, and cron failure email settings.
 - Cron jobs send email only on failures, never on success.
@@ -32,18 +33,19 @@ Add a production-ready account system to a Sakura-hosted website while preservin
 3. Add authentication API endpoints.
 4. Add session and page access checks.
 5. Add role model:
-   - `user`: default verified users.
-   - `staff`: limited private pages.
+   - a pending group such as `unverified`: newly registered users before email verification.
+   - a default group such as `user`: normal verified users.
+   - optional groups such as `staff`: limited private pages.
    - `admin`: fixed full access.
 6. Add registration:
    - disabled by default,
    - requires email,
-   - creates disabled pending user,
+   - creates disabled pending user or assigns the pending group,
    - stores only token hash and expiry,
    - sends Japanese verification email,
-   - enables user as `user` after verification.
+   - enables or promotes the user to the normal default group after verification unless the project requires admin approval.
 7. Add admin/supervisor UI:
-   - match existing sidebar/header/card/input style,
+   - match the existing navigation, header, card, form, and input style,
    - no marketing landing page,
    - compact operational layout,
    - permission controls only for actually protected pages,
@@ -54,7 +56,7 @@ Add a production-ready account system to a Sakura-hosted website while preservin
    - wrappers send failure email on non-zero status only.
 9. Add protected page handoff:
    - central account code decides whether a request may enter the page,
-   - the entry PHP injects `window.SITE_AUTH.pagePermission` or an equivalent project-scoped global,
+   - the entry PHP injects a project-scoped global such as `window.SITE_AUTH.pagePermission`,
    - the page reads that value for buttons/forms/features,
    - page-specific APIs repeat the same permission check server-side.
 10. Deploy and verify:
