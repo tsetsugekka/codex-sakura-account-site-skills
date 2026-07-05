@@ -20,6 +20,7 @@ Mailbox creation contract:
 
 - Creating or confirming the real sender mailbox is part of this skill, not an optional afterthought.
 - Prefer a sender such as `notify@example.com`, using the site's real domain.
+- If an ignored local deploy secret file already exists, Codex may use it to authenticate SSH and, when accepted by Sakura Control Panel, the control-panel login. Never print the values.
 - If Sakura Control Panel access is authorized through browser/computer use, Codex should open the mail/mailbox section and create the mailbox there.
 - If an authenticated Sakura Control Panel session or approved credential path is already available, Codex should reuse it and should not require the user to log in again.
 - For control-panel login, 2FA, and mailbox password fields, follow the user's delegation. The user may type secrets directly, or may explicitly ask Codex to generate/fill a strong mailbox password. Do not ask the user to perform the whole mailbox creation flow if Codex can operate the panel.
@@ -29,16 +30,44 @@ Mailbox creation contract:
 Observed successful flow, generalized:
 
 ```text
-1. Create or confirm the sender mailbox in Sakura Control Panel with browser/computer use.
-2. Reuse an existing authenticated Sakura session if available; ask the user only for missing login, 2FA, or delegated secret input.
-3. Use SSH only after the mailbox exists.
-4. Over SSH, confirm sendmail/mail/PHP mail availability.
-5. Store sender identity in private server config, not admin UI.
-6. Wire registration verification, cron failure alerts, and setting-confirmation mail to that sender.
-7. Send a test message and report server acceptance without revealing secrets.
+1. Read only the necessary fields from an ignored local deploy secret or secure prompt; never echo values.
+2. Use a temporary local SSH helper when needed to avoid leaking passwords into shell history or command output.
+3. Over SSH, inspect the Sakura account for existing mailbox folders and available commands such as mail, sendmail, PHP mail, or provider-specific mailbox tools.
+4. If the intended mailbox does not exist and no verified SSH mailbox-creation command is available, open Sakura Control Panel with browser/computer use.
+5. Reuse an existing authenticated Sakura session if available; otherwise use approved credentials or ask the user only for missing login, 2FA, or delegated secret input.
+6. In the mail address list, use the new/add flow, fill the mailbox local part, description, strong password, and the default or smallest reasonable quota.
+7. If broad live-change permission was already granted and the action is a normal recoverable setup step, submit without asking again. If authorization is unclear or the action is destructive, costly, public-facing, secret-rotating, or hard to undo, stop and ask one concise confirmation.
+8. After creation, use SSH/SFTP for sendmail/PHP mail checks, private config, application code, and delivery testing.
+9. Store sender identity in private server config, not admin UI.
+10. Wire registration verification, cron failure alerts, and setting-confirmation mail to that sender.
+11. Send a test message and report server acceptance without revealing secrets.
 ```
 
-Do not replace step 1 with SSH. Sakura mailbox account creation belongs to the control panel path; SSH starts at server-side configuration and delivery testing.
+Do not replace control-panel creation with SSH unless a verified Sakura mailbox CLI exists. In the proven path, SSH is reconnaissance and post-creation verification; Sakura mailbox account creation belongs to the control-panel path.
+
+SSH reconnaissance examples:
+
+```bash
+command -v mail || true
+command -v sendmail || true
+command -v postconf || true
+command -v doveadm || true
+command -v vadduser || true
+command -v virtualmin || true
+find /home/ACCOUNT -maxdepth 3 \( -iname "*mail*" -o -iname ".forward" -o -iname ".qmail*" \) | sed -n "1,120p"
+```
+
+Control-panel route:
+
+```text
+1. Open Sakura Server Control Panel.
+2. If the login form accepts server domain/account email plus password and approved deploy credentials are available, use them without printing values.
+3. Open the mail address management page.
+4. Confirm whether only default mailboxes such as postmaster exist.
+5. Click the new/add mail address action.
+6. Fill the mailbox local part, description, password, and quota.
+7. Submit creation when authorized by the user's broad instruction or an explicit confirmation. Do not add extra confirmations for normal recoverable setup steps.
+```
 
 Fallback checklist when control-panel access is unavailable:
 
