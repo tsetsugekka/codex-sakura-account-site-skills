@@ -53,7 +53,7 @@
 
 - **困りごと:** 新ページ公開後に古い CSS/JS が残る。Sakura 上に古い assets が増える。cron が作る JSON や HTML 注入を上書きしたくない。
 - **Codex がすること:** ページに一度だけ動く更新チェックを入れ、古い hashed assets は「現在 + 直前」だけ残す運用にし、live data と cron 注入済み HTML を保護する。
-- **できあがる状態:** ユーザーに手動リロードを頼まず新しい表示へ移行でき、Sakura 上の不要な古い assets も安全に整理できる。
+- **できあがる状態:** ユーザーに手動リロードを頼まず新しい表示へ移行でき、更新用の `__deploy_v` は読み込み後に URL から消え、Sakura 上の不要な古い assets も安全に整理できる。
 
 ## 特徴
 
@@ -76,7 +76,7 @@
   リポジトリ全体や `dist` 全体を再帰アップロードせず、SFTP manifest に書いたファイルだけを配布します。
 
 - **公開後の古いスタイル対策**
-  新しいページやスタイルを公開した後、ユーザーに手動リロードを求めず、ページ側で同一オリジンの JS/CSS 参照変更を検出して一度だけ更新します。Sakura 上の古い hash assets は「現在 + 直前」の世代だけ残し、cron 生成データやサーバー注入 HTML は保護します。
+  新しいページやスタイルを公開した後、ユーザーに手動リロードを求めず、ページ側で同一オリジンの JS/CSS 参照変更を検出して一度だけ更新します。更新用の `__deploy_v` は `history.replaceState` で表示 URL から消し、Sakura 上の古い hash assets は「現在 + 直前」の世代だけ残し、cron 生成データやサーバー注入 HTML は保護します。
 
 - **ページ権限の引き継ぎを明確化**
   ロールごとのページ権限はアカウントシステムが保持し、保護ページの PHP 入口が `window.SITE_AUTH.pagePermission` のような実行時値を注入します。ページ側はロール名ではなく、そのページ用の permission key を見ます。
@@ -137,7 +137,7 @@ Use $static-deploy-refresh-check to retrofit old static pages with one-time depl
 - 登録確認 token は平文保存せず、hash と有効期限だけを保存する。
 - 公開ページは、サイドバーの表示位置に関係なく、ロール権限設定に入れない。
 - 静的サイトの配布では、新しい hashed assets を先に上げ、最後に live `index.html` を上げる。
-- 静的ページの cache-busting は、同一ページの JS/CSS 参照変更だけを見て一度だけ更新する。生産 JSON、cron 出力、scraper 管理の SEO ブロックは触らない。
+- 静的ページの cache-busting は、同一ページの JS/CSS 参照変更だけを見て一度だけ更新し、読み込み後に `__deploy_v` を `history.replaceState` で URL から消す。生産 JSON、cron 出力、scraper 管理の SEO ブロックは触らない。
 - Sakura 上の古い assets を削除する場合は、ページ単位で dry-run し、現在の live HTML が参照する assets と直前世代を残す。cron が更新する HTML 領域は、公開前にオンラインの最新 HTML からマージしてから上書きする。
 - Codex が自動で SSH/SFTP や GitHub push を実行する場合でも、初回のユーザー承認とスコープ確認を前提にする。
 
