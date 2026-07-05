@@ -31,7 +31,7 @@
   SSH/SFTP、Sakura コントロールパネル、sendmail、メールボックス、非公開データ配置を前提にしています。
 
 - **Codex automation-first**
-  Codex が実行できる作業は Codex が行います。ユーザーの役割は、GitHub の認証コード入力、Sakura のログイン/2FA、Sakura SSH ユーザー名・パスワードの安全入力など、本人しか扱えない入力に限ります。
+  Codex が実行できる作業は Codex が行います。Sakura や GitHub の既存ログイン状態・承認済み資格情報が使える場合はそのまま進め、ユーザーの役割は、認証コード、ログイン/2FA、SSH ユーザー名・パスワードなど本人しか扱えない入力が必要な場面に限ります。
 
 - **許可リスト型のデプロイ**
   リポジトリ全体や `dist` 全体を再帰アップロードせず、SFTP manifest に書いたファイルだけを配布します。
@@ -80,7 +80,7 @@ Use $sakura-auth-site-setup to add Japanese login, user groups, registration ema
 - 実パスワードやトークンは Git に入れない。
 - `LOCAL_DEPLOY_SECRETS.md` などのローカル秘密ファイルは `.gitignore` に入れる。
 - メール送信元は存在する実メールボックスを使う。
-- 新規メールボックスが必要な依頼では、ユーザーが browser/computer use を許可しているなら Codex が Sakura コントロールパネルで作成を進める。作成または既存 mailbox の存在確認が終わるまで「完了」と言わない。
+- 新規メールボックスが必要な依頼では、ユーザーが browser/computer use を許可しているなら Codex が Sakura コントロールパネルで作成を進める。既存のログイン状態が使える場合、ユーザーに再ログインを求めない。作成または既存 mailbox の存在確認が終わるまで「完了」と言わない。
 - メールボックス作成は Sakura コントロールパネルで行う。SSH は作成後の sendmail/PHP mail 確認、私密設定、コード配置、cron テストに使う。
 - サイト名、公開 URL、送信元メール、送信元名、envelope sender はサーバー側の私密設定に置き、管理画面で編集させない。
 - 管理画面で編集できるメール項目は、原則として cron 失敗通知の受信先だけにする。

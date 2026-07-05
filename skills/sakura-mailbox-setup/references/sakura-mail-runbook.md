@@ -21,6 +21,7 @@ Mailbox creation contract:
 - Creating or confirming the real sender mailbox is part of this skill, not an optional afterthought.
 - Prefer a sender such as `notify@example.com`, using the site's real domain.
 - If Sakura Control Panel access is authorized through browser/computer use, Codex should open the mail/mailbox section and create the mailbox there.
+- If an authenticated Sakura Control Panel session or approved credential path is already available, Codex should reuse it and should not require the user to log in again.
 - For control-panel login, 2FA, and mailbox password fields, follow the user's delegation. The user may type secrets directly, or may explicitly ask Codex to generate/fill a strong mailbox password. Do not ask the user to perform the whole mailbox creation flow if Codex can operate the panel.
 - If the control panel cannot be accessed after trying the authorized path, stop and report the mailbox as not created. Provide fallback instructions instead of claiming the mail setup is complete.
 - Never save the mailbox password in Git, `LOCAL_DEPLOY_SECRETS.md`, project docs, shell history, or admin-editable JSON.
@@ -29,11 +30,12 @@ Observed successful flow, generalized:
 
 ```text
 1. Create or confirm the sender mailbox in Sakura Control Panel with browser/computer use.
-2. Use SSH only after the mailbox exists.
-3. Over SSH, confirm sendmail/mail/PHP mail availability.
-4. Store sender identity in private server config, not admin UI.
-5. Wire registration verification, cron failure alerts, and setting-confirmation mail to that sender.
-6. Send a test message and report server acceptance without revealing secrets.
+2. Reuse an existing authenticated Sakura session if available; ask the user only for missing login, 2FA, or delegated secret input.
+3. Use SSH only after the mailbox exists.
+4. Over SSH, confirm sendmail/mail/PHP mail availability.
+5. Store sender identity in private server config, not admin UI.
+6. Wire registration verification, cron failure alerts, and setting-confirmation mail to that sender.
+7. Send a test message and report server acceptance without revealing secrets.
 ```
 
 Do not replace step 1 with SSH. Sakura mailbox account creation belongs to the control panel path; SSH starts at server-side configuration and delivery testing.
