@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sakura SSH Deploy Setup"
+  short_description: "Prepare safe Sakura SSH and SFTP deploys"
+  default_prompt: "Use $sakura-ssh-deploy-setup to prepare password-safe SSH/SFTP deployment for a Sakura Server project."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sakura Auth Site Setup"
+  short_description: "Build Sakura sites with Japanese auth"
+  default_prompt: "Use $sakura-auth-site-setup to add Japanese account, role, registration, and cron alert features to a Sakura-hosted website."

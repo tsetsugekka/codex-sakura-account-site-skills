@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sakura Mailbox Setup"
+  short_description: "Configure Sakura mailbox delivery safely"
+  default_prompt: "Use $sakura-mailbox-setup to configure a real Sakura mailbox and verify website mail delivery."

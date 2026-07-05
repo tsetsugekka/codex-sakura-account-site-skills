@@ -1,0 +1,26 @@
+.admin-panel input:not([type="checkbox"]),
+.admin-panel select {
+  min-height: 40px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  padding: 0 14px;
+  line-height: 40px;
+  text-indent: 0;
+  outline: none;
+}
+
+.admin-panel input:not([type="checkbox"]):focus,
+.admin-panel select:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
+}
+
+.admin-panel input[type="checkbox"] {
+  width: 16px;
+  min-height: 16px;
+  padding: 0;
+  line-height: normal;
+}
+
