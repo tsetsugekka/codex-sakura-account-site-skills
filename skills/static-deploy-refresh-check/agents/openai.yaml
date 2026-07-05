@@ -1,0 +1,4 @@
+interface:
+  display_name: "Static Deploy Refresh Check"
+  short_description: "Refresh stale pages and prune old assets"
+  default_prompt: "Use $static-deploy-refresh-check to add one-time deploy refresh checks, keep only current and previous static asset generations, protect live cron data, and include the behavior when creating new pages."

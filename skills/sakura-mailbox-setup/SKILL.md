@@ -38,6 +38,7 @@ Label credentials by source and scope. On Sakura Rental Server, the server accou
 9. Update website mail code:
    - `From: Site Name <notify@example.com>`
    - envelope sender `-fnotify@example.com` for `sendmail` or PHP `mail()`.
+   - include complete basic headers: `Date`, unique `Message-ID`, `MIME-Version`, `Content-Type`, `Content-Transfer-Encoding`, `From`, `Reply-To`, and a neutral `X-Mailer`.
 10. Store infrastructure mail settings in private server configuration, not in an admin-editable settings file:
    - site name,
    - public base URL,
@@ -47,7 +48,9 @@ Label credentials by source and scope. On Sakura Rental Server, the server accou
 11. Keep admin UI limited to runtime notification recipients, usually only cron failure recipient and a test-send action.
 12. Keep mail body in Japanese by default. Add other languages only if the site requires it.
 13. Send a harmless test email to the configured recipient.
-14. Report only success/failure and masked addresses. Do not print passwords.
+14. Treat `mail()` or sendmail success as "server accepted the message for delivery", not as recipient inbox delivery. UI and reports must say this clearly.
+15. If the user does not receive the message, check the sender mailbox and postmaster mailbox for bounces, inspect recent message headers, and check MX/SPF/DKIM/DMARC before changing application save logic.
+16. Report only success/failure and masked addresses. Do not print passwords.
 
 ## Proven End-to-End Pattern
 
@@ -61,7 +64,7 @@ Use this order when implementing a new Sakura site:
 6. Private config: write site name, public URL, From address, From display name, and envelope sender into environment variables or `config.local.php`.
 7. Application code: use the same sender for registration verification, cron failure alerts, and notification-setting confirmation.
 8. Admin UI: expose only the cron failure recipient and optional test-send action.
-9. Verification: send a harmless test email and report whether the server accepted it for delivery.
+9. Verification: send a harmless test email and report whether the server accepted it for delivery. If the recipient is an external mailbox such as Gmail, do not claim delivery until the user confirms receipt or an authoritative delivery signal proves delivery.
 
 Do not try to treat SSH as the mailbox-creation step. SSH is for reconnaissance, website-side configuration, and verification. Sakura managed mailbox account creation belongs to the control-panel path unless a verified Sakura mailbox CLI is present.
 
@@ -72,7 +75,7 @@ The task is complete only when all are true:
 - the sender mailbox has been created in Sakura Control Panel or an existing mailbox was confirmed,
 - website code/config uses that real mailbox as From and envelope sender,
 - registration verification mail and cron alert mail use the same server-configured sender,
-- a test send was accepted by the server, or a precise delivery blocker is reported.
+- a test send was accepted by the server and described accurately as accepted-for-delivery, or a precise delivery blocker is reported.
 
 If the mailbox was not created or confirmed, say that clearly and leave the task as blocked/pending. Do not summarize the website-side code as "Sakura mail configured" in that state.
 
@@ -107,3 +110,4 @@ Use `scripts/check_mail_dns.sh example.com notify@example.com` to collect DNS an
 - Do not store sender infrastructure values in an admin-editable `site_settings.json`.
 - Do not send test mail to arbitrary third parties. Use the user's configured recipient or a user-approved test address.
 - Do not promise inbox delivery only because `mail()` returned true; say the server accepted the message for delivery.
+- Do not make notification-recipient saving depend on sending a confirmation email. Save first, then provide a separate test-send action and explain accepted-vs-delivered status.

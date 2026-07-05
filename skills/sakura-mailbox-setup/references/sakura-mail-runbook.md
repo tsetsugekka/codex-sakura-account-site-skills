@@ -41,7 +41,8 @@ Observed successful flow, generalized:
 8. After creation, use SSH/SFTP for sendmail/PHP mail checks, private config, application code, and delivery testing.
 9. Store sender identity in private server config, not admin UI.
 10. Wire registration verification, cron failure alerts, and setting-confirmation mail to that sender.
-11. Send a test message and report server acceptance without revealing secrets.
+11. Send a test message and report server acceptance without revealing secrets. Do not call it delivered unless the recipient confirms receipt or another authoritative signal proves delivery.
+12. If external delivery is unclear, inspect bounce mailboxes and DNS before changing application save logic.
 ```
 
 Do not replace control-panel creation with SSH unless a verified Sakura mailbox CLI exists. In the proven path, SSH is reconnaissance and post-creation verification; Sakura mailbox account creation belongs to the control-panel path.
@@ -85,13 +86,36 @@ PHP mail pattern:
 
 ```php
 $from = 'notify@example.com';
+$messageId = bin2hex(random_bytes(16)) . '@example.com';
 $headers = [
+    'Date: ' . date(DATE_RFC2822),
+    'Message-ID: <' . $messageId . '>',
     'MIME-Version: 1.0',
     'Content-Type: text/plain; charset=UTF-8',
     'Content-Transfer-Encoding: 8bit',
     'From: Site Name <' . $from . '>',
+    'Reply-To: ' . $from,
+    'X-Mailer: Site Mailer',
 ];
 mail($to, $encodedSubject, $body, implode("\r\n", $headers), '-f' . $from);
+```
+
+Delivery interpretation:
+
+- `mail()` returning true or sendmail exiting successfully means the local server accepted the message for delivery.
+- It does not prove delivery to Gmail, Outlook, or another recipient inbox.
+- UI text should say "server accepted the message" and, when useful, tell the user to check spam, delay, and recipient-side filtering.
+- Saving a notification recipient should not fail just because a confirmation or test email was not delivered externally; keep saving and testing as separate actions.
+
+External delivery troubleshooting:
+
+```text
+1. Confirm the sender mailbox exists and the app uses it as From and envelope sender.
+2. Check sender and postmaster mailboxes for bounces.
+3. Inspect recent message headers only; avoid reading private message bodies unless needed and approved.
+4. Check MX and SPF records for the sending domain.
+5. Check whether DKIM and DMARC are available/enabled in Sakura Control Panel.
+6. If there is no immediate bounce, report accepted-for-delivery and ask the user to check spam or delayed delivery.
 ```
 
 Configuration boundary:

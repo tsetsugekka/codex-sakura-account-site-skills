@@ -13,7 +13,7 @@
 
 既存の Sakura 運用で使った安全な型を、公開できる形に抽象化しています。実ドメイン、実ユーザー名、サーバーパス、メールアドレス、パスワード、運用ログは含めません。
 
-主なゴールは次の 4 つです。
+主なゴールは次の 5 つです。
 
 | Skill | 目的 |
 | --- | --- |
@@ -21,6 +21,7 @@
 | `github-repo-publish-setup` | Codex が GitHub 新規リポジトリ作成と継続的な公開運用を整える |
 | `sakura-mailbox-setup` | Sakura の実メールボックス作成または存在確認、送信元、DNS、送信テストを整える |
 | `sakura-auth-site-setup` | ユーザー、ロール、登録確認メール、cron 失敗通知、ページ権限を持つサイトを構築する |
+| `static-deploy-refresh-check` | 新規・既存の静的ページに、公開後の古い JS/CSS を一度だけ自動更新し、古い assets の保留・削除と live data 保護を整える |
 
 ## 特徴
 
@@ -42,6 +43,9 @@
 - **許可リスト型のデプロイ**
   リポジトリ全体や `dist` 全体を再帰アップロードせず、SFTP manifest に書いたファイルだけを配布します。
 
+- **公開後の古いスタイル対策**
+  新しいページやスタイルを公開した後、ユーザーに手動リロードを求めず、ページ側で同一オリジンの JS/CSS 参照変更を検出して一度だけ更新します。Sakura 上の古い hash assets は「現在 + 直前」の世代だけ残し、cron 生成データやサーバー注入 HTML は保護します。
+
 - **ページ権限の引き継ぎを明確化**
   ロールごとのページ権限はアカウントシステムが保持し、保護ページの PHP 入口が `window.SITE_AUTH.pagePermission` のような実行時値を注入します。ページ側はロール名ではなく、そのページ用の permission key を見ます。
 
@@ -59,6 +63,7 @@ skills/
   github-repo-publish-setup/
   sakura-mailbox-setup/
   sakura-auth-site-setup/
+  static-deploy-refresh-check/
 ```
 
 このリポジトリをそのまま参照して使うことも、必要な skill フォルダだけを自分の Codex skill ディレクトリへコピーして使うこともできます。
@@ -81,6 +86,10 @@ Use $github-repo-publish-setup to create a GitHub repository and set up safe fut
 Use $sakura-auth-site-setup to add Japanese login, user groups, registration email verification, and cron failure alerts to this Sakura-hosted website.
 ```
 
+```text
+Use $static-deploy-refresh-check to retrofit old static pages with one-time deploy refresh checks and include the same behavior when creating a new page.
+```
+
 ## セキュリティ方針
 
 - 実パスワードやトークンは Git に入れない。
@@ -96,6 +105,8 @@ Use $sakura-auth-site-setup to add Japanese login, user groups, registration ema
 - 登録確認 token は平文保存せず、hash と有効期限だけを保存する。
 - 公開ページは、サイドバーの表示位置に関係なく、ロール権限設定に入れない。
 - 静的サイトの配布では、新しい hashed assets を先に上げ、最後に live `index.html` を上げる。
+- 静的ページの cache-busting は、同一ページの JS/CSS 参照変更だけを見て一度だけ更新する。生産 JSON、cron 出力、scraper 管理の SEO ブロックは触らない。
+- Sakura 上の古い assets を削除する場合は、ページ単位で dry-run し、現在の live HTML が参照する assets と直前世代を残す。cron が更新する HTML 領域は、公開前にオンラインの最新 HTML からマージしてから上書きする。
 - Codex が自動で SSH/SFTP や GitHub push を実行する場合でも、初回のユーザー承認とスコープ確認を前提にする。
 
 ## 免責
