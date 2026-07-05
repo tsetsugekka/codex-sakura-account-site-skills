@@ -11,7 +11,9 @@ Use a real Sakura mailbox as the website notification sender so account verifica
 
 Do not mark this skill complete until a real sender mailbox has either been created or its existence has been confirmed.
 
-If the user authorizes browser/computer use, Codex should handle the Sakura Control Panel mailbox creation flow. Reuse an existing authenticated Sakura Control Panel session or approved credential path when available; do not ask the user to log in again unless the session is missing, expired, or requires fresh confirmation. Do not default to telling the user to create the mailbox manually.
+If the user authorizes browser/computer use, Codex should handle the Sakura Control Panel mailbox creation flow in an isolated browser context that does not disturb the user's active browsing. Prefer the Codex in-app browser when available; it is the default isolated browser surface for Sakura Control Panel automation. Reuse an existing authenticated Sakura Control Panel session only when it is available in that isolated context, or when the user explicitly permits Codex to operate the currently open browser session. Do not ask the user to log in again unless the isolated session is missing, expired, or requires fresh confirmation. Do not default to telling the user to create the mailbox manually.
+
+Label credentials by source and scope. On Sakura Rental Server, the server account/domain password is used for both SSH/SFTP and Sakura Control Panel login. If an ignored local secret was collected as Sakura server credentials, reuse those values for both SSH/SFTP and control-panel login without printing them. Do not assume unrelated FTP, hosting, or generic deploy passwords are valid for the control panel.
 
 ## Workflow
 
@@ -23,7 +25,7 @@ If the user authorizes browser/computer use, Codex should handle the Sakura Cont
    - check whether a mailbox directory such as `/home/<account>/MailBox` already contains the intended mailbox,
    - check mail tools such as `mail`, `sendmail`, PHP `mail()`, and any provider-specific mailbox commands,
    - do not assume SSH can create Sakura managed mailboxes unless a verified provider command exists.
-4. If the user explicitly authorizes browser/computer control, open or use the Sakura Control Panel session and create the mailbox there. If Sakura is already authenticated in the available browser/session context, continue without interrupting the user. If private deploy credentials can log in to the control panel, use them without printing values. For login, 2FA, and mailbox password fields, follow the user's delegation: the user may type them, or the user may explicitly ask Codex to generate/fill a strong mailbox password. Do not store or print control-panel credentials or mailbox passwords.
+4. If the user explicitly authorizes browser/computer control, open or use the Sakura Control Panel session and create the mailbox there. Prefer the Codex in-app browser; otherwise use a separate browser profile, automation browser, or dedicated window/tab that the user is not actively using. Do not switch, click, type into, or close the user's active Chrome tabs unless the user explicitly allows control of that session for the current task. If Sakura is already authenticated in an isolated available browser/session context, continue without interrupting the user. For control-panel login, use credentials only when they are identified as Sakura Control Panel credentials, Sakura server account/domain credentials accepted by the control panel, or credentials the user explicitly says are valid for this login; otherwise have the user enter them directly in the isolated browser. For login, 2FA, and mailbox password fields, follow the user's delegation: the user may type them, or the user may explicitly ask Codex to generate/fill a strong mailbox password. Do not store or print control-panel credentials or mailbox passwords.
 5. In the control panel, use the mail address management flow: open the mail address list, choose new/add, fill the mailbox local part, a neutral description, a strong password, and a minimal reasonable quota such as the panel default. If the user has already granted broad live-change permission, proceed without repeated confirmation for normal recoverable steps. Ask a concise confirmation only when authorization is unclear, the action is hard to undo, may create cost, deletes data, expands public access, or changes/rotates secrets.
 6. If control-panel access is unavailable after attempting the authorized path, stop and report that mailbox creation is blocked. Give the fallback checklist and do not claim Sakura mail setup is complete.
 7. Confirm the mailbox exists on the server or in the control panel.
@@ -51,10 +53,10 @@ If the user authorizes browser/computer use, Codex should handle the Sakura Cont
 
 Use this order when implementing a new Sakura site:
 
-1. Browser/computer use: open Sakura Control Panel and create or confirm the sender mailbox on the real domain. If an authenticated Sakura session is already available, use it; a fresh user login is not required.
-2. User-only input: request Sakura login, 2FA, or delegated secret entry only when the session is absent, expired, or asks for fresh confirmation. Do not expose secrets in chat, files, logs, or commits.
+1. Browser/computer use: open Sakura Control Panel in the Codex in-app browser when available, or another isolated browser context, and create or confirm the sender mailbox on the real domain. If an authenticated Sakura session is already available in that isolated context, use it; a fresh user login is not required. Do not take over the user's active browser page unless the user explicitly asks Codex to use that session.
+2. User-only input: request Sakura Control Panel login, 2FA, or delegated secret entry only when the isolated session is absent, expired, or asks for fresh confirmation. Reuse an existing SSH/SFTP secret for the control panel when it is the Sakura server account/domain credential. Do not expose secrets in chat, files, logs, or commits.
 3. SSH reconnaissance: before creating a new mailbox, SSH may confirm existing mailbox folders and available mail tools, using a temporary local helper that reads ignored local secrets without printing them.
-4. Control-panel creation: if SSH shows no existing mailbox and no verified provider mailbox-creation command, create the mailbox through Sakura Control Panel instead of handing the task to the user.
+4. Control-panel creation: if SSH shows no existing mailbox and no verified provider mailbox-creation command, create the mailbox through Sakura Control Panel in the isolated browser context instead of handing the task to the user.
 5. SSH/SFTP verification: after the mailbox exists, check server mail tools such as `sendmail`, `mail`, and PHP `mail()`.
 6. Private config: write site name, public URL, From address, From display name, and envelope sender into environment variables or `config.local.php`.
 7. Application code: use the same sender for registration verification, cron failure alerts, and notification-setting confirmation.
@@ -76,7 +78,7 @@ If the mailbox was not created or confirmed, say that clearly and leave the task
 
 ## Confirmation Discipline
 
-Minimize confirmation prompts. Once the user has delegated the Sakura setup task and authorized browser/computer use, continue through normal, recoverable setup steps without asking again. Creating a sender mailbox for the requested site is a normal step when it can be deleted or changed later. Ask again only for high-risk boundaries: destructive changes, extra cost, public exposure, secret rotation, unclear target account/domain, or irreversible actions.
+Minimize confirmation prompts. Once the user has delegated the Sakura setup task and authorized browser/computer use, continue through normal, recoverable setup steps without asking again, but only inside the approved isolated browser context. Creating a sender mailbox for the requested site is a normal step when it can be deleted or changed later. Ask again only for high-risk boundaries: destructive changes, extra cost, public exposure, secret rotation, unclear target account/domain, irreversible actions, or any need to control the user's active browser session.
 
 ## Helper Script
 
@@ -95,6 +97,8 @@ Use `scripts/check_mail_dns.sh example.com notify@example.com` to collect DNS an
 - Do not skip mailbox creation just because Sakura has no stable SSH mailbox-creation command; use the control panel when the user authorizes browser/computer control.
 - Do not present manual mailbox creation as the normal path when authorized browser/computer control is available.
 - Do not require a fresh Sakura login when an existing authenticated control-panel session or approved credential path is available.
+- Do not disturb the user's active browser pages. Use the Codex in-app browser when available, or another isolated browser context, for Sakura Control Panel automation unless the user explicitly permits controlling the current browser session.
+- Do not treat unrelated generic deploy credentials as Sakura Control Panel credentials. Sakura server account/domain credentials are shared by SSH/SFTP and the control panel.
 - Do not print local secret file contents, control-panel credentials, generated mailbox passwords, or SSH passwords.
 - Do not ask for repeated confirmations for normal recoverable steps after the user has broadly delegated the task.
 - Do not claim completion when mailbox creation is still a manual TODO.

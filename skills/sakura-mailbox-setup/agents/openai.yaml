@@ -1,4 +1,4 @@
 interface:
   display_name: "Sakura Mailbox Setup"
   short_description: "Create or confirm Sakura mailbox delivery"
-  default_prompt: "Use $sakura-mailbox-setup to create or confirm the real Sakura sender mailbox, reusing an authenticated Sakura Control Panel session when available and asking the user only for required login, 2FA, or secret input, before configuring website mail delivery."
+  default_prompt: "Use $sakura-mailbox-setup to create or confirm the real Sakura sender mailbox in the Codex in-app browser when available, avoid controlling the user's active browser unless explicitly allowed, reuse Sakura server account/domain credentials for both SSH/SFTP and control-panel login, and ask only for required login, 2FA, or secret input before configuring website mail delivery."
