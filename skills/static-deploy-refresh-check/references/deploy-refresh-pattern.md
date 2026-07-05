@@ -10,6 +10,7 @@ The deploy refresh script solves the stale-entry problem common to static sites 
 4. The inline check fetches the live entry HTML with `cache: no-store`.
 5. It extracts same-origin JS/CSS URLs from both documents.
 6. If the signatures differ, it reloads once with a query parameter such as `__deploy_v=<hash>`.
+7. After the refreshed page loads, it removes `__deploy_v` from the address bar with `history.replaceState` without causing another reload.
 
 This is not a replacement for hashed filenames. It is a bridge that helps already-open or stale pages move to the latest entry HTML.
 
@@ -68,6 +69,25 @@ sessionStorage.setItem('deploy-refresh:' + location.pathname, version);
 ```
 
 If the same version was already attempted, do not reload again. This prevents loops when a proxy or server returns unexpected HTML.
+
+## Cleaning the version parameter
+
+The refreshed page should not leave deploy-only query parameters visible. On startup, remove `__deploy_v` from the current URL with `history.replaceState` before scheduling the next deploy check:
+
+```js
+function cleanDeployVersionParam() {
+  try {
+    var url = new URL(location.href);
+    if (!url.searchParams.has('__deploy_v')) return;
+    url.searchParams.delete('__deploy_v');
+    if (history && history.replaceState) {
+      history.replaceState(history.state, document.title, url.toString());
+    }
+  } catch (_error) {}
+}
+```
+
+This must not reload the page or clear the `sessionStorage` guard. If a project already shipped a different deploy-version parameter, also remove that legacy parameter for compatibility.
 
 ## Publish order
 
