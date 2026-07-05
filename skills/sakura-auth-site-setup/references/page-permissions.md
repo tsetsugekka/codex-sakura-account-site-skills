@@ -20,6 +20,39 @@ Recommended role model:
 
 Admin role is fixed and cannot be downgraded through the UI.
 
+For pages with feature levels, define the permission keys on the page catalog, not as a global enum:
+
+```php
+'/example-tool/' => [
+    'path' => '/example-tool/',
+    'title' => 'Example Tool',
+    'permissions' => [
+        ['key' => 'read', 'label' => '閲覧のみ'],
+        ['key' => 'operate', 'label' => '操作可能'],
+        ['key' => 'manage', 'label' => '管理可能'],
+    ],
+],
+```
+
+The admin UI should offer `権限なし` plus the page-defined options for each role. Do not save page permissions directly on users.
+
+Protected page entrypoints should inject a small runtime contract into the page:
+
+```js
+window.SITE_AUTH = {
+  path: "/example-tool/",
+  pagePermission: "operate",
+  permissions: [
+    { key: "read", label: "閲覧のみ" },
+    { key: "operate", label: "操作可能" },
+    { key: "manage", label: "管理可能" }
+  ],
+  user: { username: "example", roles: ["staff"] }
+};
+```
+
+Page code must read `pagePermission`. It must not infer behavior from role names. If the page has its own API, the API must enforce the same permission server-side.
+
 Before changing page access:
 
 1. List current public pages.
@@ -27,4 +60,3 @@ Before changing page access:
 3. Confirm pages that should stay public.
 4. Confirm pages that need role check.
 5. Update docs with exact paths.
-

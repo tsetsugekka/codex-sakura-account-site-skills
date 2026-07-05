@@ -18,6 +18,9 @@ Add a production-ready account system to a Sakura-hosted website while preservin
 - Registration requires email verification before login.
 - Verified new users default to the `user` group.
 - Role groups control page access.
+- Page permissions are saved on roles/user groups, not individual users.
+- Protected page entrypoints inject a server-evaluated page permission value for the page.
+- Page UI and page APIs enforce page-defined permission keys; do not infer behavior from global role names.
 - Admin/supervisor page edits users, roles, page permissions, and cron failure email settings.
 - Cron jobs send email only on failures, never on success.
 - Mail sender uses a real mailbox configured through Sakura.
@@ -43,12 +46,18 @@ Add a production-ready account system to a Sakura-hosted website while preservin
    - match existing sidebar/header/card/input style,
    - no marketing landing page,
    - compact operational layout,
-   - page permission checkboxes only for actually protected pages.
+   - permission controls only for actually protected pages,
+   - public pages stay public even if they are shown in a staff-like navigation group.
 8. Add cron failure notification setting:
    - save recipient in private settings file,
    - send Japanese confirmation mail when non-empty,
    - wrappers send failure email on non-zero status only.
-9. Deploy and verify:
+9. Add protected page handoff:
+   - central account code decides whether a request may enter the page,
+   - the entry PHP injects `window.SITE_AUTH.pagePermission` or an equivalent project-scoped global,
+   - the page reads that value for buttons/forms/features,
+   - page-specific APIs repeat the same permission check server-side.
+10. Deploy and verify:
    - PHP syntax,
    - shell/Python cron syntax,
    - registration remains closed by default,
@@ -74,4 +83,4 @@ Add a production-ready account system to a Sakura-hosted website while preservin
 - Do not put private settings, user DB, verification tokens, or logs under the public web root.
 - Do not redirect old admin paths to new hidden paths if the user explicitly wants no redirect.
 - Do not silently make public pages protected or protected pages public; document permission changes.
-
+- Do not put a public page in the admin permission screen only because it appears in a staff-only sidebar group.

@@ -21,6 +21,12 @@ Avoid:
 - visible explanatory text about how the app works,
 - changing public navigation unless requested.
 
+Form spacing notes:
+
+- If text touches the left border of an input, inspect inherited `padding`, `line-height`, `text-indent`, `box-sizing`, and component-specific selectors before increasing the whole card's padding.
+- Prefer fixing the input's own horizontal padding over adding large surrounding whitespace.
+- Test the exact rendered admin page after deploy; CSS that works in a local component can be overridden by shared sidebar/admin styles.
+
 Validation:
 
 1. Build the admin page.
@@ -28,4 +34,3 @@ Validation:
 3. Check that text is not clipped or touching borders.
 4. Check desktop and narrow viewport.
 5. Confirm protected and public pages behave as documented.
-

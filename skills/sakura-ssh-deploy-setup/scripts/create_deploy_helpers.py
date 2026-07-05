@@ -9,6 +9,17 @@ user: your-account
 password: your-password
 """
 
+MANIFEST_TEMPLATE = """# SFTP upload manifest example.
+# Copy this file, replace placeholders, and keep only intended uploads.
+# Upload new hashed assets before uploading the live index.html.
+# Never add .env, user data, databases, caches, uploads, or LOCAL_DEPLOY_SECRETS.md.
+
+# mkdir /home/your-account/www/assets
+# put dist/assets/app.12345678.js /home/your-account/www/assets/app.12345678.js
+# put dist/assets/app.12345678.css /home/your-account/www/assets/app.12345678.css
+# put dist/index.html /home/your-account/www/index.html
+"""
+
 EXPECT_COMMON = r'''#!/usr/bin/expect -f
 set timeout 180
 set script_dir [file dirname [info script]]
@@ -67,7 +78,7 @@ exit [lindex $result 3]
 
 SSH_SCRIPT = EXPECT_COMMON + r'''
 if {[llength $argv] < 1} {
-  puts "Usage: expect scripts/ssh-with-local-secret.expect <remote command...>"
+  puts "Usage: expect scripts/ssh-run-with-local-secret.expect <remote command...>"
   exit 2
 }
 spawn ssh -oBatchMode=no "$user@$host" {*}$argv
@@ -107,10 +118,10 @@ def main() -> None:
     root = Path(args.project_root).resolve()
     write_file(root / "LOCAL_DEPLOY_SECRETS.example.md", SECRET_TEMPLATE)
     ensure_gitignore(root)
+    write_file(root / "_deploy/SFTP_UPLOAD.example.txt", MANIFEST_TEMPLATE)
     write_file(root / "scripts/sftp-with-local-secret.expect", SFTP_SCRIPT, executable=True)
-    write_file(root / "scripts/ssh-with-local-secret.expect", SSH_SCRIPT, executable=True)
+    write_file(root / "scripts/ssh-run-with-local-secret.expect", SSH_SCRIPT, executable=True)
     print("Create LOCAL_DEPLOY_SECRETS.md locally from the example and fill real values outside Git.")
 
 if __name__ == "__main__":
     main()
-

@@ -41,10 +41,25 @@ User record fields:
 
 Rules:
 
+- Keep page permissions in role/group records. Do not store per-user page grants unless the project explicitly requires an exception.
 - Store password hashes with PHP `password_hash`.
 - Generate verification tokens with cryptographic randomness.
 - Store only `hash('sha256', token)`.
 - Expire verification links, commonly after 24 hours.
 - Regenerate session ID on login and verification success.
 - Use `HttpOnly`, `SameSite=Lax`, and `Secure` on HTTPS.
+- Use file locks and temporary-file-plus-rename writes when the lightweight store is JSON.
+- Make the bootstrap admin fixed full access and prevent deleting or downgrading it through the UI.
+- Keep registration closed by default; when opened, create a disabled/pending user until email verification succeeds.
 
+Role catalog pattern:
+
+```json
+[
+  {"id": "user", "name": "User", "pages": [], "system": true},
+  {"id": "staff", "name": "Staff", "pages": [], "system": true},
+  {"id": "admin", "name": "管理者", "pages": ["*"], "system": true}
+]
+```
+
+For pages with levels, store page permission values by page path inside the role record. The `admin` role should resolve to full access or the highest declared page permission.

@@ -15,6 +15,14 @@ Do not send mail when:
 - a lock prevents concurrent execution,
 - a normal batch intentionally stops before completion.
 
+Store the recipient in a private settings file, for example:
+
+```json
+{"cronFailureEmail": "operator@example.com"}
+```
+
+Validate that the address is syntactically valid, shorter than 255 characters, and contains no newline characters. When the admin saves a non-empty recipient, send a Japanese confirmation email so the operator knows the setting is active.
+
 Recommended body fields:
 
 ```text
@@ -35,3 +43,4 @@ Envelope sender: notify@example.com
 
 Keep logs outside the public web root.
 
+Use Sakura `sendmail` or `mail` when available. Do not store SMTP credentials in the repository just to make cron alerts work.

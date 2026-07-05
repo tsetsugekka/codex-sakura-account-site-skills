@@ -23,4 +23,6 @@ Validation:
 - Confirm the file exists locally.
 - Confirm `.gitignore` contains `LOCAL_DEPLOY_SECRETS.md`.
 - Confirm `git status --short` does not list the real secret file.
-
+- Confirm helper names match the project convention:
+  - `scripts/sftp-with-local-secret.expect`
+  - `scripts/ssh-run-with-local-secret.expect`
