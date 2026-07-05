@@ -42,6 +42,20 @@ If the user authorizes browser/computer use, Codex should handle the Sakura Cont
 11. Send a harmless test email to the configured recipient.
 12. Report only success/failure and masked addresses. Do not print passwords.
 
+## Proven End-to-End Pattern
+
+Use this order when implementing a new Sakura site:
+
+1. Browser/computer use: open Sakura Control Panel and create or confirm the sender mailbox on the real domain.
+2. User-only input: handle Sakura login, 2FA, and any delegated secret entry without exposing secrets in chat, files, logs, or commits.
+3. SSH/SFTP: after the mailbox exists, check server mail tools such as `sendmail`, `mail`, and PHP `mail()`.
+4. Private config: write site name, public URL, From address, From display name, and envelope sender into environment variables or `config.local.php`.
+5. Application code: use the same sender for registration verification, cron failure alerts, and notification-setting confirmation.
+6. Admin UI: expose only the cron failure recipient and optional test-send action.
+7. Verification: send a harmless test email and report whether the server accepted it for delivery.
+
+Do not try to treat SSH as the mailbox-creation step. SSH is for website-side configuration and verification after the Sakura mailbox exists.
+
 ## Completion Criteria
 
 The task is complete only when all are true:
@@ -70,6 +84,7 @@ Use `scripts/check_mail_dns.sh example.com notify@example.com` to collect DNS an
 - Do not skip mailbox creation just because Sakura has no stable SSH mailbox-creation command; use the control panel when the user authorizes browser/computer control.
 - Do not present manual mailbox creation as the normal path when authorized browser/computer control is available.
 - Do not claim completion when mailbox creation is still a manual TODO.
+- Do not say "mail configured" after only changing code over SSH; the Sakura mailbox must be created or confirmed first.
 - Do not expose site name, public URL, From address, From name, or envelope sender as admin UI fields.
 - Do not store sender infrastructure values in an admin-editable `site_settings.json`.
 - Do not send test mail to arbitrary third parties. Use the user's configured recipient or a user-approved test address.

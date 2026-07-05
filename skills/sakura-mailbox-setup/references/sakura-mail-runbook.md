@@ -25,6 +25,19 @@ Mailbox creation contract:
 - If the control panel cannot be accessed after trying the authorized path, stop and report the mailbox as not created. Provide fallback instructions instead of claiming the mail setup is complete.
 - Never save the mailbox password in Git, `LOCAL_DEPLOY_SECRETS.md`, project docs, shell history, or admin-editable JSON.
 
+Observed successful flow, generalized:
+
+```text
+1. Create or confirm the sender mailbox in Sakura Control Panel with browser/computer use.
+2. Use SSH only after the mailbox exists.
+3. Over SSH, confirm sendmail/mail/PHP mail availability.
+4. Store sender identity in private server config, not admin UI.
+5. Wire registration verification, cron failure alerts, and setting-confirmation mail to that sender.
+6. Send a test message and report server acceptance without revealing secrets.
+```
+
+Do not replace step 1 with SSH. Sakura mailbox account creation belongs to the control panel path; SSH starts at server-side configuration and delivery testing.
+
 Fallback checklist when control-panel access is unavailable:
 
 ```text

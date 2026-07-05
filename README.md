@@ -81,6 +81,7 @@ Use $sakura-auth-site-setup to add Japanese login, user groups, registration ema
 - `LOCAL_DEPLOY_SECRETS.md` などのローカル秘密ファイルは `.gitignore` に入れる。
 - メール送信元は存在する実メールボックスを使う。
 - 新規メールボックスが必要な依頼では、ユーザーが browser/computer use を許可しているなら Codex が Sakura コントロールパネルで作成を進める。作成または既存 mailbox の存在確認が終わるまで「完了」と言わない。
+- メールボックス作成は Sakura コントロールパネルで行う。SSH は作成後の sendmail/PHP mail 確認、私密設定、コード配置、cron テストに使う。
 - サイト名、公開 URL、送信元メール、送信元名、envelope sender はサーバー側の私密設定に置き、管理画面で編集させない。
 - 管理画面で編集できるメール項目は、原則として cron 失敗通知の受信先だけにする。
 - ユーザー DB、設定ファイル、cron ログは Web 公開ディレクトリの外に置く。
