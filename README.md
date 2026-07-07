@@ -1,6 +1,6 @@
 # Sakura Account Site Skills
 
-> Sakura Server 上に、SSH 配布・GitHub 公開運用・メール送信元・認証付き Web サイトを安全に整えるための Codex Skill Suite。
+> Sakura Server 上に、SSH 配布・メール送信元・認証付き Web サイト・公開ページ SEO を安全に整えるための Codex Skill Suite。
 
 ![Skill Suite](https://img.shields.io/badge/Codex-Skill%20Suite-4f46e5)
 ![Sakura Server](https://img.shields.io/badge/Sakura%20Server-ready-22c55e)
@@ -13,7 +13,7 @@
 
 既存の Sakura 運用で使った安全な型を、公開できる形に抽象化しています。実ドメイン、実ユーザー名、サーバーパス、メールアドレス、パスワード、運用ログは含めません。
 
-主なゴールは次の 6 つです。どの skill を使うかは、「今なにを作りたいか」で選びます。
+主なゴールは次の 5 つです。どの skill を使うかは、「今なにを作りたいか」で選びます。
 
 ### 1. Sakura への自動デプロイ準備
 
@@ -23,15 +23,7 @@
 - **Codex がすること:** Sakura の接続情報をローカル秘密ファイルに保存し、SSH/SFTP helper、アップロード許可リスト、`.gitignore`、確認手順を作る。
 - **できあがる状態:** Codex が以後のデプロイで、許可されたファイルだけを Sakura にアップロードできる。秘密情報は Git に入らない。
 
-### 2. GitHub 公開運用の準備
-
-`github-repo-publish-setup`
-
-- **困りごと:** 新しいプロジェクトを GitHub に公開し、以後も Codex から安全に commit/push したい。
-- **Codex がすること:** GitHub リポジトリ作成、remote 設定、初回 commit/push、branch 運用ルール、公開時の注意点を整える。認証コードや承認だけユーザーが処理する。
-- **できあがる状態:** プロジェクトが GitHub に載り、以後の更新も intended branch に公開できる。
-
-### 3. Sakura メール送信元の準備
+### 2. Sakura メール送信元の準備
 
 `sakura-mailbox-setup`
 
@@ -39,7 +31,7 @@
 - **Codex がすること:** Sakura の実メールボックスを作成または確認し、送信元、envelope sender、DNS、PHP `mail()` / sendmail、メールヘッダー、テスト送信を確認する。
 - **できあがる状態:** 存在する Sakura メールアドレスを送信元にした通知メール基盤ができる。管理画面には送信元設定を出さず、通知先だけ編集する。
 
-### 4. ログイン・ユーザー権限付きサイトの構築
+### 3. ログイン・ユーザー権限付きサイトの構築
 
 `sakura-auth-site-setup`
 
@@ -47,7 +39,7 @@
 - **Codex がすること:** ユーザー保存場所、password hash、メール確認 token、ロール別ページ権限、管理画面、cron 失敗通知設定をサイトに組み込む。
 - **できあがる状態:** 登録確認後のユーザー、staff/admin などの権限、保護ページ、管理画面を持つアカウント制サイトになる。
 
-### 5. 静的ページ公開後の表示崩れ・古いファイル対策
+### 4. 静的ページ公開後の表示崩れ・古いファイル対策
 
 `static-deploy-refresh-check`
 
@@ -55,13 +47,23 @@
 - **Codex がすること:** ページに一度だけ動く更新チェックを入れ、古い hashed assets は「現在 + 直前」だけ残す運用にし、live data と cron 注入済み HTML を保護する。
 - **できあがる状態:** ユーザーに手動リロードを頼まず新しい表示へ移行でき、更新用の `__deploy_v` は読み込み後に URL から消え、Sakura 上の不要な古い assets も安全に整理できる。
 
-### 6. 公開ページの SEO 補強
+### 5. 公開ページの SEO 補強
 
 `public-page-seo-assist`
 
 - **困りごと:** JavaScript アプリや静的ツールページが、検索エンジンには空に近く見える。SNS 共有カード、検索説明文、`noscript` の静的説明、cron が更新する SEO ブロックの扱いもページごとにばらつく。
 - **Codex がすること:** 公開ページだけを対象に、title、description、canonical、OGP、Twitter Card、WebSite/WebApplication JSON-LD、`h1`、`noscript` fallback、cron 管理 marker を整える。データ更新時刻やニュース時刻は `data-nosnippet` で Google snippet に拾わせない。
 - **できあがる状態:** JS が動く前でもページ内容が検索エンジンに伝わり、共有カードも安定する。ユーザーには更新時刻を見せつつ、検索結果には古い「ページ公開日」のように見える時刻を出しにくくする。
+
+## 推奨 companion skill
+
+GitHub 新規リポジトリ作成、初回 commit/push、以後の intended branch 公開運用も Codex に任せたい場合は、別配布の companion skill `github-repo-publish-setup` を併用します。配布リポジトリ名は `codex-github-publish-workflow-skill` です。
+
+この Sakura suite は GitHub 公開運用を内蔵しません。Sakura セットアップと GitHub 公開は独立した関心事なので、GitHub 側は汎用 skill として管理します。
+
+```text
+Use $github-repo-publish-setup to create or connect the GitHub repository before publishing this Sakura project.
+```
 
 ## 特徴
 
@@ -72,7 +74,7 @@
   SSH/SFTP、Sakura コントロールパネル、sendmail、メールボックス、非公開データ配置を前提にしています。
 
 - **Codex automation-first**
-  Codex が実行できる作業は Codex が行います。Sakura や GitHub の既存ログイン状態・承認済み資格情報が使える場合はそのまま進め、ユーザーの役割は、認証コード、ログイン/2FA、SSH ユーザー名・パスワードなど本人しか扱えない入力が必要な場面に限ります。
+  Codex が実行できる作業は Codex が行います。Sakura の既存ログイン状態・承認済み資格情報が使える場合はそのまま進め、ユーザーの役割は、認証コード、ログイン/2FA、SSH ユーザー名・パスワードなど本人しか扱えない入力が必要な場面に限ります。
 
 - **ブラウザ操作は隔離して実行**
   Sakura コントロールパネルの操作は、利用可能なら Codex in-app browser を優先します。ユーザーが明示しない限り、現在操作中の Chrome タブやウィンドウを奪いません。
@@ -106,7 +108,6 @@
 ```text
 skills/
   sakura-ssh-deploy-setup/
-  github-repo-publish-setup/
   sakura-mailbox-setup/
   sakura-auth-site-setup/
   static-deploy-refresh-check/
@@ -123,10 +124,6 @@ Use $sakura-ssh-deploy-setup to prepare password-safe SSH/SFTP deployment for a 
 
 ```text
 Use $sakura-mailbox-setup to create a real notification sender mailbox and verify website mail delivery.
-```
-
-```text
-Use $github-repo-publish-setup to create a GitHub repository and set up safe future Codex commits and pushes.
 ```
 
 ```text
@@ -160,7 +157,7 @@ Use $public-page-seo-assist to improve a public JavaScript tool page with stable
 - Sakura 上の古い assets を削除する場合は、ページ単位で dry-run し、現在の live HTML が参照する assets と直前世代を残す。cron が更新する HTML 領域は、公開前にオンラインの最新 HTML からマージしてから上書きする。
 - 公開ページ SEO では、`noscript`、静的概要、SEO fallback、JSON-LD、HTML コメントに実日時を書かない。日時がユーザーに必要な場合は可視 UI に残し、該当要素へ `data-nosnippet` を付ける。
 - 記事ページではないツール、ダッシュボード、ランキング、feed には、`<time datetime>`、`datePublished`、`dateModified`、Article/NewsArticle 系 JSON-LD を付けない。
-- Codex が自動で SSH/SFTP や GitHub push を実行する場合でも、初回のユーザー承認とスコープ確認を前提にする。
+- Codex が自動で SSH/SFTP を実行する場合でも、初回のユーザー承認とスコープ確認を前提にする。GitHub repo 作成や commit/push は companion skill `github-repo-publish-setup` の publish discipline に従う。
 
 ## 免責
 

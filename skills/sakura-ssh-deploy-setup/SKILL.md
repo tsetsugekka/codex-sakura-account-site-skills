@@ -11,6 +11,8 @@ Set up a Sakura Server project so Codex can deploy through SSH/SFTP using a loca
 
 Codex should do the setup work. The user should only need to provide Sakura host/user/password through a secure prompt or equivalent secret-entry UI.
 
+GitHub repository creation and commit/push discipline are intentionally outside this skill. If the user also wants Codex to create a GitHub repository, connect `origin`, make the initial commit, or set future publish rules, use/install the companion skill `github-repo-publish-setup` before committing or pushing.
+
 ## Workflow
 
 1. Inspect the repository and confirm the intended deploy target, public web root, and private job/data paths.
@@ -80,3 +82,4 @@ python3 /path/to/skills/sakura-ssh-deploy-setup/scripts/create_deploy_helpers.py
 - Do not ask the user to manually edit `LOCAL_DEPLOY_SECRETS.md` when a secure prompt or equivalent secret-entry UI is available.
 - Require deploy manifests that list exact local and remote paths.
 - Do not upload or overwrite production data unless the user explicitly asks for that exact data action.
+- Do not treat GitHub setup as complete from this skill alone; use the separate `github-repo-publish-setup` companion for repo creation and publish discipline.

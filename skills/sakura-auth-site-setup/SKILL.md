@@ -9,6 +9,8 @@ description: Add a Japanese account system to a Sakura-hosted website. Use when 
 
 Add a production-ready account system to a Sakura-hosted website while preserving the existing site's visual style. Mail delivery is production-ready only after the real Sakura sender mailbox is created or confirmed.
 
+This skill builds the Sakura-hosted account system. If the project also needs GitHub repository creation, initial commit/push, or ongoing Codex publish discipline, use/install the companion skill `github-repo-publish-setup`; do not duplicate GitHub workflow rules here.
+
 ## Core Requirements
 
 - Japanese UI and Japanese email by default.
@@ -96,3 +98,4 @@ If the real sender mailbox is not created or confirmed, report that mail deliver
 - Do not silently make public pages protected or protected pages public; document permission changes.
 - Do not put a public page in the admin permission screen only because it appears in a staff-only sidebar group.
 - Do not make infrastructure mail sender settings editable from the admin UI.
+- Do not implement ad hoc GitHub repo creation or publish rules inside this skill; use the separate `github-repo-publish-setup` companion when needed.

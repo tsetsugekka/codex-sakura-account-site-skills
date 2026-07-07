@@ -1,4 +1,0 @@
-interface:
-  display_name: "GitHub Repo Publish Setup"
-  short_description: "Prepare GitHub repos for Codex publishing"
-  default_prompt: "Use $github-repo-publish-setup to have Codex create the GitHub repository, with the user only handling required GitHub verification prompts."
