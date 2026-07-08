@@ -62,7 +62,7 @@ GitHub 新規リポジトリ作成、初回 commit/push、以後の intended bra
 この Sakura suite は GitHub 公開運用を内蔵しません。Sakura セットアップと GitHub 公開は独立した関心事なので、GitHub 側は汎用 skill として管理します。
 
 ```text
-Use $github-repo-publish-setup to create or connect the GitHub repository before publishing this Sakura project.
+この Sakura プロジェクトを公開する前に、$github-repo-publish-setup で GitHub リポジトリを新規作成または接続してください。
 ```
 
 ## 特徴
@@ -119,23 +119,23 @@ skills/
 ## 使用例
 
 ```text
-Use $sakura-ssh-deploy-setup to prepare password-safe SSH/SFTP deployment for a new Sakura Server site.
+新しい Sakura Server サイトに、パスワードを Git に残さない SSH/SFTP デプロイ手順を整えるため、$sakura-ssh-deploy-setup を使ってください。
 ```
 
 ```text
-Use $sakura-mailbox-setup to create a real notification sender mailbox and verify website mail delivery.
+実在する通知送信元メールボックスを作成し、サイトからのメール送信を確認するため、$sakura-mailbox-setup を使ってください。
 ```
 
 ```text
-Use $sakura-auth-site-setup to add Japanese login, user groups, registration email verification, and cron failure alerts to this Sakura-hosted website.
+この Sakura ホストのサイトに、日本語ログイン、ユーザーグループ、登録確認メール、cron 失敗通知を追加するため、$sakura-auth-site-setup を使ってください。
 ```
 
 ```text
-Use $static-deploy-refresh-check to retrofit old static pages with one-time deploy refresh checks and include the same behavior when creating a new page.
+既存の静的ページへ一度だけ動くデプロイ更新チェックを追加し、新規ページにも同じ挙動を入れるため、$static-deploy-refresh-check を使ってください。
 ```
 
 ```text
-Use $public-page-seo-assist to improve a public JavaScript tool page with stable Japanese SEO tags, social cards, noscript fallback, cron-managed SEO markers, and timestamp-safe Google snippets.
+公開 JavaScript ツールページに、安定した日本語 SEO タグ、canonical と og:url、sitemap、必要な場合だけの共有カード、noscript fallback、cron 管理 SEO marker、Google snippet に安全な時刻表示を整えるため、$public-page-seo-assist を使ってください。
 ```
 
 ## セキュリティ方針

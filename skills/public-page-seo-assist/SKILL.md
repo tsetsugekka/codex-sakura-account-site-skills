@@ -1,6 +1,6 @@
 ---
 name: public-page-seo-assist
-description: Improve SEO for public, indexable static or app pages. Use when Codex needs to add or audit Japanese SEO head tags, canonical URLs, Open Graph/Twitter cards, WebSite/WebApplication JSON-LD without article dates, visible or screen-reader summaries, noscript SEO fallback blocks, cron-updated static SEO regions, and Google-snippet-safe handling of data/news/post timestamps with data-nosnippet.
+description: Use when improving or auditing SEO for public indexable Sakura-hosted static pages, JavaScript app entry pages, dashboard/tool pages, or cron-updated pages with volatile timestamps.
 ---
 
 # Public Page SEO Assist
@@ -10,6 +10,15 @@ description: Improve SEO for public, indexable static or app pages. Use when Cod
 Improve SEO for public pages without turning volatile app data into misleading Google publication dates.
 
 Use this skill only for pages intended to be publicly indexable. For login-only, staff-only, or private pages, do not add indexable SEO fallback content; use `noindex` or the project's access-control pattern instead.
+
+This skill should align four public signals before considering the work complete:
+
+- page `<head>` canonical URL,
+- Open Graph `og:url`,
+- `sitemap.xml` `<loc>`,
+- the actual final public URL after redirects, trailing-slash handling, and extensionless aliases.
+
+Do not add `og:image` just to fill a checklist. A missing social image is better than a tiny favicon, stale screenshot, relative path, private asset, or low-quality preview.
 
 ## Workflow
 
@@ -23,29 +32,43 @@ Use this skill only for pages intended to be publicly indexable. For login-only,
    - `<meta name="description">`,
    - canonical URL,
    - Open Graph card,
+   - `og:url` matching the canonical URL,
    - Twitter card,
    - `og:locale`,
    - `og:site_name`,
    - favicon/touch icon if the project has them,
    - `robots` only when appropriate.
-4. Use structured data conservatively:
+4. Decide whether the page should have `og:image`:
+   - add it only for a stable, high-quality, public, absolute URL image,
+   - do not use favicon or small icon files as the fallback social image,
+   - remove old relative or weak `og:image` / `twitter:image` tags when they create a worse preview than no image.
+5. Use structured data conservatively:
    - `WebSite` for the site top page,
    - `WebApplication` for interactive tools,
    - `SoftwareApplication` only when that is a better fit for the product,
    - no `datePublished`, `dateModified`, or article-style dates unless the page is genuinely an article.
-5. Add crawlable body context:
+6. Add crawlable body context:
    - one real or screen-reader-only `<h1>`,
    - a concise static summary near the app root when useful,
    - a `<noscript>` fallback that explains the page and major entities/search intents.
-6. If cron/server scripts update SEO fallback content, add stable marker comments around only that managed region and document ownership in the updater.
-7. If the page displays data update times, news times, X/SNS post times, generated-at times, or reviewed/updated labels, apply the time-snippet rules in `references/time-snippet-safety.md`.
-8. If the entry HTML is deployed statically and also has cron-managed HTML regions, combine this skill with `static-deploy-refresh-check` so live `<noscript>` regions are fetched and merged before publishing.
-9. Verify:
+7. If cron/server scripts update SEO fallback content, add stable marker comments around only that managed region and document ownership in the updater.
+8. If the page displays data update times, news times, X/SNS post times, generated-at times, or reviewed/updated labels, apply the time-snippet rules in `references/time-snippet-safety.md`.
+9. Repair sitemap coverage:
+   - include every public indexable route that should be discoverable,
+   - make each `<loc>` match the canonical URL and `og:url`,
+   - use the final route form, such as trailing slash for directory pages and extensionless URL when that is the public route,
+   - generate `sitemap.xml` during deploy when daily data pages need fresh `<lastmod>`,
+   - use source/content mtime or a conservative date for static tool pages and non-news pages.
+10. If the entry HTML is deployed statically and also has cron-managed HTML regions, combine this skill with `static-deploy-refresh-check` so live `<noscript>` regions are fetched and merged before publishing.
+11. Verify:
    - built HTML contains one title, one canonical when applicable, and expected meta cards,
+   - canonical, `og:url`, and sitemap `<loc>` match the final public URL,
+   - `og:image` is absent unless a real preview image passes the quality/stability check,
    - JSON-LD parses as valid JSON and has no article date fields unless intentionally article-like,
    - `<noscript>` contains useful public text but no real timestamps,
    - visible UI timestamps that may be indexed use `data-nosnippet`,
-   - cron-managed markers remain intact after build/deploy preparation.
+   - cron-managed markers remain intact after build/deploy preparation,
+   - deploy manifests upload generated `robots.txt` and `sitemap.xml` when the project owns those files.
 
 ## Required References
 
@@ -57,22 +80,43 @@ Use this skill only for pages intended to be publicly indexable. For login-only,
 Prefer this shape for static app entry HTML:
 
 ```html
-<title>Primary keyword / product name - concise value</title>
-<link rel="canonical" href="https://example.com/tool/" />
-<meta name="description" content="Human-written page summary with main search intents.">
+<title>PTS急騰株分析 - 上昇理由をAI分析</title>
+<link rel="canonical" href="https://example.com/pts/" />
+<meta name="description" content="PTSで急騰した銘柄の材料、テーマ、出来高変化を整理し、翌営業日の注目点を確認できます。">
 <meta name="robots" content="index, follow">
 
 <meta property="og:type" content="website">
-<meta property="og:title" content="Share card title">
-<meta property="og:description" content="Share card description.">
+<meta property="og:title" content="PTS急騰株分析">
+<meta property="og:description" content="PTSで動いた銘柄の材料と市場テーマを整理します。">
+<meta property="og:url" content="https://example.com/pts/">
 <meta property="og:locale" content="ja_JP">
-<meta property="og:site_name" content="Site Name">
+<meta property="og:site_name" content="Example Market Tools">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Share card title">
-<meta name="twitter:description" content="Share card description.">
+<meta name="twitter:title" content="PTS急騰株分析">
+<meta name="twitter:description" content="PTSで動いた銘柄の材料と市場テーマを整理します。">
 ```
 
-Use a `summary_large_image` Twitter card only when the page has a stable, high-quality preview image that is safe to expose.
+Use a `summary_large_image` Twitter card only when the page has a stable, high-quality preview image that is safe to expose. If the only available asset is a favicon, app icon, generated placeholder, or visually weak screenshot, leave `og:image` and `twitter:image` out.
+
+## Sitemap / Canonical Pattern
+
+When the project owns `sitemap.xml`, keep URL signals consistent:
+
+```xml
+<url>
+  <loc>https://example.com/pts/</loc>
+  <lastmod>2026-07-09</lastmod>
+  <changefreq>daily</changefreq>
+</url>
+```
+
+Rules:
+
+- Use the same final URL as the page canonical and `og:url`.
+- For daily-updated data pages, generate `<lastmod>` at deploy time instead of committing a stale static date.
+- For stable tools or non-news pages, use the file/content update date and a conservative `changefreq`.
+- `lastmod` in sitemap is allowed metadata; it is not the same as article/date markup in HTML.
+- Include generated `sitemap.xml` and `robots.txt` in the deploy upload manifest when the site root owns them.
 
 ## Noscript Pattern
 
@@ -82,8 +126,8 @@ For JavaScript-heavy public tools, include a real fallback:
 <noscript>
   <section style="text-align:left;max-width:860px;margin:2rem auto;padding:0 1rem;line-height:1.7;">
     <!-- TOOL_STATIC_SEO_START -->
-    <h2>Tool name and search intent</h2>
-    <p>Stable public explanation of what this page shows and who it helps.</p>
+    <h2>ツール名と主要な検索意図</h2>
+    <p>このページで確認できる情報、対象市場、対象ユーザーを自然な文章で説明する。</p>
     <!-- TOOL_STATIC_SEO_END -->
   </section>
 </noscript>

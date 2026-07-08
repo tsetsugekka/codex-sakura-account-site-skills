@@ -17,7 +17,7 @@ Every public page should have:
   - `og:description`.
   - `og:locale`, usually `ja_JP`.
   - `og:site_name`.
-  - `og:url` when the project convention includes it.
+  - `og:url` matching the canonical URL.
 - Twitter card metadata:
   - `twitter:card`, usually `summary`.
   - `twitter:title`.
@@ -25,6 +25,36 @@ Every public page should have:
 - Favicons/touch icons matching the project.
 
 Keep titles stable. Use body text and `noscript` for secondary search intents rather than stuffing the title with every keyword.
+
+## URL Signal Consistency
+
+For public indexable pages, these signals should point to the same final URL:
+
+- `<link rel="canonical" href="...">`
+- `<meta property="og:url" content="...">`
+- `sitemap.xml` `<loc>`
+- the final public route after redirects and route normalization
+
+Use the route that users and crawlers should keep:
+
+- directory pages usually end with `/`,
+- extensionless public aliases should stay extensionless if that is the canonical route,
+- avoid mixing `/tool`, `/tool/`, `/tool/index.html`, and redirected variants.
+
+When fixing many pages, add a small verification script that reads source and built/deploy output instead of relying on manual inspection.
+
+## Sitemap Ownership
+
+If the project owns `sitemap.xml`, keep it complete and generated from the deploy/build source of truth:
+
+- include every public indexable page that should be discoverable,
+- exclude login-only, staff-only, private, draft, or `noindex` pages,
+- make `<loc>` match canonical and `og:url`,
+- use deploy-time `<lastmod>` for pages whose public data refreshes daily,
+- use source/content mtime or a conservative date for static tools and non-news pages,
+- include generated `robots.txt` and `sitemap.xml` in the upload manifest when publishing to Sakura.
+
+Do not commit hardcoded daily dates that will become stale. Generating sitemap metadata during deploy is safer for sites with cron-refreshed pages.
 
 ## Structured Data Choices
 
@@ -111,15 +141,26 @@ Open Graph and Twitter cards are for social/link previews, not the full SEO body
 <meta property="og:type" content="website">
 <meta property="og:title" content="24時間出来事 - 市場ナラティブ速報">
 <meta property="og:description" content="主要Xアカウントの市場関連発言を追跡し、重要な市場ナラティブを整理します。">
+<meta property="og:url" content="https://example.com/tools/24hfeed/">
 <meta name="twitter:card" content="summary">
 ```
 
-Use `summary_large_image` only when:
+Use `og:image`, `twitter:image`, and `summary_large_image` only when:
 
 - a stable image exists,
 - the URL is absolute,
 - the image is public,
+- the image is large and clear enough for a social card,
 - the image will not expose private data or old market timestamps.
+
+Do not force a social image from:
+
+- favicon files,
+- tiny app icons,
+- placeholder images,
+- relative paths,
+- stale screenshots,
+- images that make the page look less trustworthy than no image.
 
 ## Verification Checklist
 
@@ -127,6 +168,9 @@ Before finishing:
 
 - Inspect source and built HTML.
 - Confirm no duplicate `<title>`, canonical, or conflicting robots tags.
+- Confirm canonical, `og:url`, sitemap `<loc>`, and final public URL match.
+- Confirm public sitemap coverage includes the intended indexable pages and excludes private/noindex pages.
+- Confirm `og:image` is absent unless a real stable preview image passes the sharing-card checks.
 - Validate JSON-LD as JSON.
 - Search for real date/time patterns in static SEO regions:
   - `YYYY/MM/DD`

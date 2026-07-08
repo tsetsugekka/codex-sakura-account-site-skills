@@ -76,6 +76,17 @@ Unless the page is genuinely an article, do not add:
 
 For dashboards, tools, feeds, rankings, and app pages, use `WebApplication` or `WebSite` without page date fields.
 
+## Sitemap Lastmod Is Separate
+
+`sitemap.xml` `<lastmod>` is allowed when it truthfully describes when the page content changed. It is not the same as `datePublished`, `dateModified`, `<time datetime>`, or article markup inside HTML.
+
+Use it carefully:
+
+- daily-updated public data pages can generate today's deploy date as `<lastmod>`,
+- static tools and non-news pages should use source/content mtime or a conservative update date,
+- avoid committing hardcoded daily `<lastmod>` values that will become stale,
+- keep real dates out of `noscript`, static SEO body text, JSON-LD, and HTML comments even when sitemap uses `<lastmod>`.
+
 ## Use Relative Batches In SEO Text
 
 Static SEO can describe freshness without dates:
@@ -109,4 +120,5 @@ Then classify each match:
 - No HTML date-stamp comments for SEO refresh throttling.
 - All visible data/news/post/generated/reviewed timestamps use `data-nosnippet`.
 - No `datePublished` or `dateModified` unless the page is a true article.
+- Sitemap `<lastmod>` is generated or maintained separately from HTML SEO text.
 - JSON-LD stays valid and uses the correct non-article schema type.
