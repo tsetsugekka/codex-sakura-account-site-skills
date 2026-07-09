@@ -1,94 +1,107 @@
 ---
 name: cron-crawler-safety
-description: Use when building, auditing, or repairing cron-driven crawlers, scrapers, scheduled feed collectors, SEO injectors, JSON generators, or static-site data refresh jobs for Sakura Server or other small websites, with safe crawling, polite rate limits, locks, timeouts, atomic writes, production-data protection, failure-only email alerts, and deploy-safe handling of cron-injected HTML.
+description: Use when building, auditing, or repairing cron-driven crawlers, scrapers, scheduled feed collectors, SEO injectors, JSON generators, or static-site data refresh jobs for Sakura Server or other small websites, especially when existing cron/Python docs, live-data ownership, per-host pacing, locks, atomic writes, failure-only email, or deploy-safe cron-injected HTML are involved.
 ---
 
 # Cron Crawler Safety
 
-Use this skill for website cron jobs and crawler/scraper pipelines that update public pages, JSON feeds, SEO fallback blocks, alerts, or cached data.
+Use this skill for website cron jobs and crawler/scraper pipelines that update public pages, JSON feeds, SEO fallback blocks, alerts, cached data, or sitemap files.
 
-The goal is not only "make the scraper work"; the goal is a production job that is polite to sources, safe for the website, observable on failure, and hard to corrupt during deploys.
+The core rule is: start from the site's real cron scripts and docs, then preserve the production contract. Do not replace a working crawler with generic advice before reading how its live data, cache, SEO, deploy, and alert paths already behave.
+
+## Required First Pass
+
+Before editing or adding a job, inspect the project-specific sources:
+
+- cron wrappers, crontab docs, deploy scripts, and SFTP manifests,
+- Python/JS crawler scripts and their command-line flags,
+- `README`, `SPEC`, `CHANGELOG`, maintenance docs, and recovery notes,
+- public output files, private cache/history paths, lock/stamp files, and live HTML marker names.
+
+If the project has a `README/SPEC/CHANGELOG` pattern, update those docs in the same task when changing crawler behavior, cron timing, deploy protection, SEO output, alerts, data ownership, or recovery steps.
 
 ## Required Behavior
 
-- Confirm the crawler is allowed and appropriate:
-  - prefer official APIs, feeds, sitemaps, or export endpoints when available,
-  - respect robots.txt, published API terms, rate limits, authentication boundaries, and copyright,
-  - do not bypass paywalls, CAPTCHAs, login controls, bot defenses, or access restrictions,
-  - do not scrape private/personal data unless the user owns the data source or has explicit authorization.
-- Make cron jobs boring and recoverable:
+- Preserve the production data contract:
+  - classify each file as source input, private runtime/cache/history, public generated output, or deploy artifact,
+  - never overwrite live cron-owned JSON/HTML with stale local snapshots,
+  - fetch current live files first when repairing or merging production data,
+  - keep raw history, queues, long-term cache, credentials, and logs outside the public web root.
+- Enforce source-friendly crawling:
+  - prefer official APIs, feeds, sitemaps, exports, or documented endpoints,
+  - for authorized sources, use normal login/API/session/export flows only when the user has the right to access the data,
+  - do not implement paywall, CAPTCHA, login, bot-defense, or rate-limit bypass logic,
+  - add per-host random sleep/jitter; different URLs on the same host still share one throttle,
+  - cap pages, batches, retries, and whole-run time.
+- Make cron runs boring and recoverable:
   - one job instance at a time with a lock,
-  - bounded runtime with timeout,
-  - deterministic working directory and environment,
-  - structured logs outside public web roots,
+  - stamps for "already ran this slot/day" when cron wakes more often than the real job,
+  - deterministic working directory and PATH,
+  - private structured logs with retention,
   - non-zero exit on real failure,
-  - no email on success, normal no-op, lock skip, or expected partial batch.
-- Protect production data:
-  - write to temp files first, validate, then atomic rename,
-  - keep last-good data if a fetch or parse fails,
-  - never overwrite live JSON/HTML with stale local snapshots,
-  - backup before destructive migrations,
-  - separate source data, runtime data, generated public data, and deploy artifacts.
+  - success, no-op, expected defer, and lock skip exit cleanly without mail.
+- Publish outputs safely:
+  - write temp files in the same directory, validate, then atomic rename,
+  - keep last-good or previous data for critical public outputs,
+  - do not publish partial market/source batches as final output unless the page is designed for partial data,
+  - after successful public data writes, refresh sitemap/robots or equivalent SEO indexes when the site uses them.
 - Protect deploy-time cron injections:
-  - when cron updates a `noscript`, SEO, or HTML marker region, fetch the latest live HTML and merge that managed region before uploading a new static `index.html`,
-  - do not overwrite scraper-owned SEO blocks with an older local build,
-  - combine with `static-deploy-refresh-check` for stale JS/CSS cache refresh on static pages.
+  - when cron owns a `noscript`, SEO, or HTML marker region, fetch live HTML and merge that region before uploading a new static `index.html`,
+  - make missing live HTML a deploy failure by default,
+  - use emergency stale deploy flags only with a documented restore path,
+  - combine with `static-deploy-refresh-check` when stale JS/CSS cache refresh is needed.
 - Add failure-only notification:
-  - use a wrapper that sends mail only when the command exits non-zero,
-  - include job name, host, cwd, command, exit code, timestamp, and a short sanitized log tail,
-  - do not include credentials, cookies, raw personal data, full tokens, or huge logs,
-  - keep the recipient configurable in private server settings or environment, not hardcoded in source.
+  - send mail only when the crawler command exits non-zero or validation fails,
+  - include job, slot, host, cwd, command label, status, timestamp, log path, and sanitized log tail,
+  - do not include cookies, authorization headers, API keys, passwords, raw personal data, full tokens, or huge responses,
+  - keep recipient/from settings in private server config or environment.
 
 ## Workflow
 
-1. Inventory the job.
-   - Identify cron entry, command, working directory, source URLs/APIs, output files, public page dependencies, logs, and notification path.
-   - Identify whether outputs are public assets, private cache, runtime state, or source-of-truth data.
-2. Review source access safety.
-   - Read `references/safe-crawling-policy.md`.
-   - Prefer APIs or feeds. If scraping HTML, set a clear User-Agent and conservative cadence.
-   - Add exponential backoff, jitter where useful, and conditional requests (`ETag` / `Last-Modified`) when supported.
-3. Design the cron wrapper.
+1. Inventory the real job.
+   - List cron entry, wrapper, source URLs/APIs, source host groups, command flags, output files, logs, locks, stamps, queues, and docs.
    - Read `references/cron-job-patterns.md`.
-   - Use a lock directory/file, timeout, stable PATH, explicit cwd, and log file.
-   - Use `scripts/write_cron_wrapper.py` when a reusable shell wrapper is useful.
-4. Harden the crawler code.
-   - Request timeout on every network call.
-   - Retry only transient failures, with a strict max.
-   - Treat parse changes as failures or degraded output, not as empty success.
-   - Validate minimum row counts, required keys, schema, and timestamp monotonicity before publish.
-5. Publish outputs safely.
-   - Write `output.tmp`, validate it, then atomic rename to `output.json` or equivalent.
-   - Keep `output.previous` or a timestamped backup for critical public data.
-   - For public HTML marker injection, update only the marked block and preserve unrelated live HTML.
-6. Wire failure-only email.
-   - If the project uses `sakura-auth-site-setup`, reuse its cron failure notification setting and mail helper.
-   - Otherwise keep recipient/from settings in private config or environment.
-   - Do not send on success or expected no-op.
-7. Document operations.
-   - Record cron schedule, owner, outputs, logs, lock path, data ownership, retry policy, and restore method in the project maintenance docs.
-   - If the page has public SEO fallback, document which script owns each marker block.
-8. Verify.
-   - Run the crawler once manually with a harmless target or dry-run.
-   - Run the wrapper with a command that succeeds and confirm no email.
-   - Run the wrapper with a command that fails and confirm failure notification.
-   - Confirm lock skip does not email.
-   - Confirm deploy does not erase cron-managed live data or marker blocks.
+2. Audit source access and request pacing.
+   - Read `references/safe-crawling-policy.md`.
+   - Add per-host throttle, randomized sleeps, bounded retries, and backoff.
+   - Cache and reuse existing data; request only missing or stale data where possible.
+3. Define data ownership before deploy changes.
+   - Mark cron-owned public JSON/HTML, private runtime files, and build artifacts.
+   - Exclude cron-owned data from static deploy packages unless explicitly doing a live-data migration from a current live baseline.
+4. Harden crawler code.
+   - Add request timeout on every network call.
+   - Treat parse/schema changes as failure or degraded output, not empty success.
+   - Validate minimum row counts, required keys, date monotonicity, and output schema before publishing.
+   - Use queue/defer states when manual repair would conflict with an active or imminent cron run.
+5. Harden the wrapper.
+   - Use lock, slot/day stamp when needed, stable cwd/PATH, private log, log retention, and failure-only mail.
+   - Use `scripts/write_cron_wrapper.py` only when the project lacks an existing wrapper pattern.
+6. Protect HTML SEO regions.
+   - Keep marker names stable.
+   - Fetch live HTML before build packaging.
+   - Merge live marker regions into the new index.
+   - Keep visible data/news/post times behind `data-nosnippet`; static SEO and `noscript` should avoid real timestamps unless the page is truly an article.
+7. Verify.
+   - Run the crawler manually or in dry-run.
+   - Test success path sends no mail.
+   - Test failure path sends one sanitized mail.
+   - Test lock skip and already-ran stamp send no mail.
+   - Test deploy packaging refuses to overwrite missing live cron-managed HTML regions.
+   - Re-read docs and changelog for consistency.
 
 ## Sakura Notes
 
-- Keep private runtime data outside `www`, for example under `/home/<account>/<app>_data/` or another non-public directory.
-- Public JSON/HTML under `www` should be generated from validated private/runtime data, not used as the only source of truth.
-- Sakura cron environments are minimal. Set PATH, cd to the project directory, and avoid relying on interactive shell startup files.
-- Use Sakura `sendmail`/`mail` or the project's existing mail helper for alerts; do not store SMTP or mailbox passwords in the repository.
-- If deployment uses SFTP manifests, include scripts and public outputs deliberately. Do not recursively upload runtime directories, caches, logs, user data, or secret config.
+- Sakura cron environments are minimal. Set PATH, `cd` explicitly, and avoid interactive shell assumptions.
+- Keep private runtime data outside `www`, for example under an app data/job directory.
+- Public JSON/HTML under `www` should be generated from validated private/runtime data, not treated as the only source of truth.
+- Use Sakura `sendmail`/`mail` or the site's existing mail helper for alerts; do not store SMTP or mailbox passwords in the repository.
+- For static deploys, upload new hashed assets before the new `index.html`. Clean old assets only after validation, keeping current and previous generations.
 
 ## Safety Rules
 
-- Do not help bypass access controls, paywalls, CAPTCHAs, bot defenses, or rate limits.
-- Do not collect credentials, cookies, personal data, private messages, or account-only content unless authorization is explicit and the data stays private.
-- Do not publish raw scraped content wholesale when a summary, metadata, or link is sufficient.
-- Do not run aggressive crawl rates. Default to slow schedules and small batches.
-- Do not hide crawler identity. Use a clear site/tool User-Agent and contact URL/email when appropriate.
-- Do not hardcode real domains, emails, account names, passwords, API keys, or absolute private paths in reusable skill files.
-- Do not call a cron job "healthy" until its failure path, lock path, and output validation are tested.
+- Do not hardcode real domains, emails, account names, passwords, API keys, cookies, session tokens, or absolute private paths in reusable skill files.
+- Do not write guidance that bypasses paywalls, login controls, CAPTCHAs, bot defenses, or source rate limits.
+- Do not collect credentials, personal data, private messages, or account-only content unless authorization is explicit and storage stays private.
+- Do not publish raw scraped content wholesale when a summary, metadata, derived fact, or link is enough.
+- Do not make high-frequency no-delay requests to the same host. Add random sleep and coordinate workers through a shared per-host throttle.
+- Do not call a cron job healthy until failure, lock-skip, already-ran, validation, atomic-write, and deploy-overwrite paths are tested.

@@ -44,8 +44,8 @@
 `cron-crawler-safety`
 
 - **困りごと:** cron で動く crawler や scraper が、失敗時に気づけない。二重起動、途中書き込み、古い JSON 上書き、過剰アクセス、SEO 注入ブロック消失が怖い。
-- **Codex がすること:** robots/API 方針、User-Agent、rate limit、lock、timeout、atomic write、last-good 保護、failure-only mail、ログ、デプロイ時の cron 注入領域マージを整える。
-- **できあがる状態:** crawler は礼儀正しく、失敗時だけ通知し、成功・lock skip・no-op ではメールしない。公開 JSON/HTML は壊れにくく、cron が作った live data をデプロイで消しにくくなる。
+- **Codex がすること:** まず既存の cron wrapper、Python/JS crawler、README/SPEC/CHANGELOG を読み、実際の運用から data ownership、cache、batch、SEO marker、restore 手順を確認する。そのうえで per-host random sleep、lock/stamp、timeout、atomic write、last-good 保護、failure-only mail、ログ、デプロイ時の live HTML marker マージを整える。
+- **できあがる状態:** crawler は source に連続高頻度アクセスせず、失敗時だけ通知し、成功・lock skip・no-op・予定された defer ではメールしない。公開 JSON/HTML は壊れにくく、cron が作った live data や `<noscript>` SEO をデプロイで消しにくくなる。
 
 ### 5. 静的ページ公開後の表示崩れ・古いファイル対策
 
@@ -94,7 +94,7 @@ GitHub 新規リポジトリ作成、初回 commit/push、以後の intended bra
   リポジトリ全体や `dist` 全体を再帰アップロードせず、SFTP manifest に書いたファイルだけを配布します。
 
 - **cron/crawler を安全運用**
-  crawler は robots/API 方針を確認し、明確な User-Agent、保守的な rate limit、timeout、retry 上限、lock、atomic write、last-good 保護を入れます。通知は failure-only にし、成功・lock skip・no-op ではメールしません。
+  既存の cron wrapper、Python/JS crawler、README/SPEC/CHANGELOG を先に読み、現在の live data 契約を壊さない形で整えます。同一 host への連続アクセスにはランダム sleep を入れ、cache-first、batch 上限、timeout、retry 上限、lock/stamp、atomic write、last-good 保護を入れます。通知は failure-only にし、成功・lock skip・no-op・予定された defer ではメールしません。
 
 - **公開後の古いスタイル対策**
   新しいページやスタイルを公開した後、ユーザーに手動リロードを求めず、ページ側で同一オリジンの JS/CSS 参照変更を検出して一度だけ更新します。更新用の `__deploy_v` は `history.replaceState` で表示 URL から消し、Sakura 上の古い hash assets は「現在 + 直前」の世代だけ残し、cron 生成データやサーバー注入 HTML は保護します。
@@ -167,8 +167,10 @@ cron で動く crawler を、二重起動防止、timeout、atomic write、last-
 - 管理画面で編集できるメール項目は、原則として cron 失敗通知の受信先だけにする。
 - ユーザー DB、設定ファイル、cron ログは Web 公開ディレクトリの外に置く。
 - 登録確認 token は平文保存せず、hash と有効期限だけを保存する。
-- crawler は公開 API、feed、sitemap、またはアクセス許可された公開ページを優先する。paywall、CAPTCHA、login、bot 防御、rate limit を回避しない。
-- cron crawler は lock、timeout、request timeout、retry 上限、atomic write、出力 validation を持つ。失敗時だけメールし、成功・no-op・lock skip・予定された defer では通知しない。
+- crawler は公開 API、feed、sitemap、またはアクセス許可されたページを優先する。認証が必要な場合は、権限のある公式 API、正規ログイン、ユーザー承認済み session、または手動 export を使う。paywall、CAPTCHA、login、bot 防御、rate limit を回避する実装はしない。
+- 同じ host に対して高頻度・無間隔で連続 request しない。URL が違っても host が同じなら per-host throttle を通し、ランダム sleep/jitter を入れる。
+- cron crawler は既存の README/SPEC/CHANGELOG と実スクリプトを確認してから変更する。lock、stamp、timeout、request timeout、retry 上限、batch 上限、atomic write、出力 validation を持つ。失敗時だけメールし、成功・no-op・lock skip・予定された defer では通知しない。
+- cron が生成する公開 JSON、分日アーカイブ、ランキング、feed inventory、chart data、`noscript` SEO marker は、通常の静的 deploy で上書きしない。必要な場合は live 版を取得してから最小差分でマージする。
 - crawler のログや通知には、cookie、authorization header、API key、個人情報、巨大な raw response を入れない。
 - 公開ページは、サイドバーの表示位置に関係なく、ロール権限設定に入れない。
 - 静的サイトの配布では、新しい hashed assets を先に上げ、最後に live `index.html` を上げる。

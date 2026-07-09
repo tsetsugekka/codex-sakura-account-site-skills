@@ -1,4 +1,4 @@
 interface:
   display_name: "Cron Crawler Safety"
-  short_description: "Safe cron crawlers and alerts"
-  default_prompt: "Use $cron-crawler-safety to make this scheduled crawler safe, polite, lock-protected, atomically published, and failure-alerted."
+  short_description: "Cron crawler hardening from real project scripts"
+  default_prompt: "Use $cron-crawler-safety to inspect this project's real cron scripts and docs, then harden crawling pace, locks, atomic outputs, live-data deploy protection, and failure-only alerts."
