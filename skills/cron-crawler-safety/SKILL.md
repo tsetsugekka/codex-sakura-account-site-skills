@@ -29,8 +29,9 @@ If the project has a `README/SPEC/CHANGELOG` pattern, update those docs in the s
   - keep raw history, queues, long-term cache, credentials, and logs outside the public web root.
 - Enforce source-friendly crawling:
   - prefer official APIs, feeds, sitemaps, exports, or documented endpoints,
-  - for authorized sources, use normal login/API/session/export flows only when the user has the right to access the data,
-  - do not implement paywall, CAPTCHA, login, bot-defense, or rate-limit bypass logic,
+  - for authorized sources, support normal login, API, user-approved browser session, cookie/session reuse, or export flows when the user has the right to access the data,
+  - do not unilaterally bypass paywalls, CAPTCHA, login checks, bot defenses, or rate limits; if one appears, stop development and discuss with the user first, guiding the user to justify access rights, purpose, risk, and an acceptable method before continuing,
+  - handle source restrictions with cache, slot windows, batch limits, backoff, per-host throttling, and random sleep rather than uncontrolled retries,
   - add per-host random sleep/jitter; different URLs on the same host still share one throttle,
   - cap pages, batches, retries, and whole-run time.
 - Make cron runs boring and recoverable:
@@ -100,8 +101,9 @@ If the project has a `README/SPEC/CHANGELOG` pattern, update those docs in the s
 ## Safety Rules
 
 - Do not hardcode real domains, emails, account names, passwords, API keys, cookies, session tokens, or absolute private paths in reusable skill files.
-- Do not write guidance that bypasses paywalls, login controls, CAPTCHAs, bot defenses, or source rate limits.
 - Do not collect credentials, personal data, private messages, or account-only content unless authorization is explicit and storage stays private.
+- Do not unilaterally bypass paywalls, CAPTCHA, login controls, bot defenses, or source rate limits. When they appear, stop development and discuss the boundary with the user; require a clear justification before implementing any continuation path.
+- Do not turn login/session handling into uncontrolled high-frequency access. Keep request pacing, cache reuse, batch limits, and retry limits in place even when the session is authorized.
 - Do not publish raw scraped content wholesale when a summary, metadata, derived fact, or link is enough.
 - Do not make high-frequency no-delay requests to the same host. Add random sleep and coordinate workers through a shared per-host throttle.
 - Do not call a cron job healthy until failure, lock-skip, already-ran, validation, atomic-write, and deploy-overwrite paths are tested.

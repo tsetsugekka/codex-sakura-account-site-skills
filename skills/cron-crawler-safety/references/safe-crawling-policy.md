@@ -9,7 +9,7 @@ Use this reference when deciding whether and how a scheduled crawler should fetc
 3. Public HTML pages that are intended for indexing and do not require special access.
 4. Browser automation only as a rendering tool for content the user is authorized to access.
 
-For authenticated data, use a normal authorized API, login session, browser profile, or manual export flow. Keep credentials and session files private and out of logs. Do not write instructions or code that bypasses paywalls, login controls, CAPTCHAs, bot defenses, access restrictions, or rate limits.
+For authenticated data, use a normal authorized API, login session, browser profile, user-approved cookie/session, or manual export flow. Keep credentials and session files private and out of logs. Do not unilaterally bypass paywalls, CAPTCHA, login checks, bot defenses, or rate limits. If one appears, stop development and discuss with the user first; guide the user to justify access rights, purpose, risk, and the acceptable method before continuing. Treat source restrictions operationally with cache reuse, slot windows, batch limits, backoff, per-host throttling, and random sleep.
 
 ## Preflight Checklist
 

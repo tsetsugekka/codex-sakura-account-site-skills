@@ -51,10 +51,11 @@ If the project owns `sitemap.xml`, keep it complete and generated from the deplo
 - exclude login-only, staff-only, private, draft, or `noindex` pages,
 - make `<loc>` match canonical and `og:url`,
 - use deploy-time `<lastmod>` for pages whose public data refreshes daily,
+- when cron jobs update public data outside manual deploys, refresh `sitemap.xml`, `robots.txt`, or the project's equivalent SEO index after successful writes so `<lastmod>` moves with data updates,
 - use source/content mtime or a conservative date for static tools and non-news pages,
 - include generated `robots.txt` and `sitemap.xml` in the upload manifest when publishing to Sakura.
 
-Do not commit hardcoded daily dates that will become stale. Generating sitemap metadata during deploy is safer for sites with cron-refreshed pages.
+Do not commit hardcoded daily dates that will become stale. Generating sitemap metadata during deploy and after successful cron public-data writes is safer for sites with cron-refreshed pages.
 
 ## Structured Data Choices
 

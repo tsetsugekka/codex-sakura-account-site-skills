@@ -167,7 +167,7 @@ cron で動く crawler を、二重起動防止、timeout、atomic write、last-
 - 管理画面で編集できるメール項目は、原則として cron 失敗通知の受信先だけにする。
 - ユーザー DB、設定ファイル、cron ログは Web 公開ディレクトリの外に置く。
 - 登録確認 token は平文保存せず、hash と有効期限だけを保存する。
-- crawler は公開 API、feed、sitemap、またはアクセス許可されたページを優先する。認証が必要な場合は、権限のある公式 API、正規ログイン、ユーザー承認済み session、または手動 export を使う。paywall、CAPTCHA、login、bot 防御、rate limit を回避する実装はしない。
+- crawler は公開 API、feed、sitemap、またはアクセス許可されたページを優先する。認証が必要な場合は、権限のある公式 API、正規ログイン、ユーザー承認済み session、ブラウザ操作、または手動 export を使う。paywall、CAPTCHA、login、bot 防御、rate limit に遭遇した場合、Codex は独断で回避しない。まず開発を止めてユーザーと十分に相談し、ユーザーにアクセス権、目的、リスク、許容できる方法を論証してもらってから次の進め方を決める。source 側の制限に対しては、cache、slot、batch 上限、per-host throttle、random sleep、retry 上限で運用する。
 - 同じ host に対して高頻度・無間隔で連続 request しない。URL が違っても host が同じなら per-host throttle を通し、ランダム sleep/jitter を入れる。
 - cron crawler は既存の README/SPEC/CHANGELOG と実スクリプトを確認してから変更する。lock、stamp、timeout、request timeout、retry 上限、batch 上限、atomic write、出力 validation を持つ。失敗時だけメールし、成功・no-op・lock skip・予定された defer では通知しない。
 - cron が生成する公開 JSON、分日アーカイブ、ランキング、feed inventory、chart data、`noscript` SEO marker は、通常の静的 deploy で上書きしない。必要な場合は live 版を取得してから最小差分でマージする。

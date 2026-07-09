@@ -58,6 +58,7 @@ Do not add `og:image` just to fill a checklist. A missing social image is better
    - make each `<loc>` match the canonical URL and `og:url`,
    - use the final route form, such as trailing slash for directory pages and extensionless URL when that is the public route,
    - generate `sitemap.xml` during deploy when daily data pages need fresh `<lastmod>`,
+   - when cron jobs successfully write public page data, refresh `sitemap.xml`, `robots.txt`, or the project's equivalent SEO index from the same server-side generator so `<lastmod>` follows data updates rather than only manual deploys,
    - use source/content mtime or a conservative date for static tool pages and non-news pages.
 10. If the entry HTML is deployed statically and also has cron-managed HTML regions, combine this skill with `static-deploy-refresh-check` so live `<noscript>` regions are fetched and merged before publishing.
 11. Verify:
@@ -114,6 +115,7 @@ Rules:
 
 - Use the same final URL as the page canonical and `og:url`.
 - For daily-updated data pages, generate `<lastmod>` at deploy time instead of committing a stale static date.
+- If a cron job refreshes the public data independently of manual deploys, call the same sitemap/robots generator after successful public writes; SEO index refresh failure can be logged without turning a successful data job into failed output when the project has that policy.
 - For stable tools or non-news pages, use the file/content update date and a conservative `changefreq`.
 - `lastmod` in sitemap is allowed metadata; it is not the same as article/date markup in HTML.
 - Include generated `sitemap.xml` and `robots.txt` in the deploy upload manifest when the site root owns them.
