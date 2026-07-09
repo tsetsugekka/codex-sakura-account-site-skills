@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cron Crawler Safety"
+  short_description: "Safe cron crawlers and alerts"
+  default_prompt: "Use $cron-crawler-safety to make this scheduled crawler safe, polite, lock-protected, atomically published, and failure-alerted."

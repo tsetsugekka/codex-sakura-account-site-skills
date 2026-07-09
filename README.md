@@ -1,6 +1,6 @@
 # Sakura Account Site Skills
 
-> Sakura Server 上に、SSH 配布・メール送信元・認証付き Web サイト・公開ページ SEO を安全に整えるための Codex Skill Suite。
+> Sakura Server 上に、SSH 配布・メール送信元・認証付き Web サイト・cron/crawler 運用・公開ページ SEO を安全に整えるための Codex Skill Suite。
 
 ![Skill Suite](https://img.shields.io/badge/Codex-Skill%20Suite-4f46e5)
 ![Sakura Server](https://img.shields.io/badge/Sakura%20Server-ready-22c55e)
@@ -13,7 +13,7 @@
 
 既存の Sakura 運用で使った安全な型を、公開できる形に抽象化しています。実ドメイン、実ユーザー名、サーバーパス、メールアドレス、パスワード、運用ログは含めません。
 
-主なゴールは次の 5 つです。どの skill を使うかは、「今なにを作りたいか」で選びます。
+主なゴールは次の 6 つです。どの skill を使うかは、「今なにを作りたいか」で選びます。
 
 ### 1. Sakura への自動デプロイ準備
 
@@ -39,7 +39,15 @@
 - **Codex がすること:** ユーザー保存場所、password hash、メール確認 token、ロール別ページ権限、管理画面、cron 失敗通知設定をサイトに組み込む。
 - **できあがる状態:** 登録確認後のユーザー、staff/admin などの権限、保護ページ、管理画面を持つアカウント制サイトになる。
 
-### 4. 静的ページ公開後の表示崩れ・古いファイル対策
+### 4. cron・crawler の安全運用
+
+`cron-crawler-safety`
+
+- **困りごと:** cron で動く crawler や scraper が、失敗時に気づけない。二重起動、途中書き込み、古い JSON 上書き、過剰アクセス、SEO 注入ブロック消失が怖い。
+- **Codex がすること:** robots/API 方針、User-Agent、rate limit、lock、timeout、atomic write、last-good 保護、failure-only mail、ログ、デプロイ時の cron 注入領域マージを整える。
+- **できあがる状態:** crawler は礼儀正しく、失敗時だけ通知し、成功・lock skip・no-op ではメールしない。公開 JSON/HTML は壊れにくく、cron が作った live data をデプロイで消しにくくなる。
+
+### 5. 静的ページ公開後の表示崩れ・古いファイル対策
 
 `static-deploy-refresh-check`
 
@@ -47,7 +55,7 @@
 - **Codex がすること:** ページに一度だけ動く更新チェックを入れ、古い hashed assets は「現在 + 直前」だけ残す運用にし、live data と cron 注入済み HTML を保護する。
 - **できあがる状態:** ユーザーに手動リロードを頼まず新しい表示へ移行でき、更新用の `__deploy_v` は読み込み後に URL から消え、Sakura 上の不要な古い assets も安全に整理できる。
 
-### 5. 公開ページの SEO 補強
+### 6. 公開ページの SEO 補強
 
 `public-page-seo-assist`
 
@@ -85,6 +93,9 @@ GitHub 新規リポジトリ作成、初回 commit/push、以後の intended bra
 - **許可リスト型のデプロイ**
   リポジトリ全体や `dist` 全体を再帰アップロードせず、SFTP manifest に書いたファイルだけを配布します。
 
+- **cron/crawler を安全運用**
+  crawler は robots/API 方針を確認し、明確な User-Agent、保守的な rate limit、timeout、retry 上限、lock、atomic write、last-good 保護を入れます。通知は failure-only にし、成功・lock skip・no-op ではメールしません。
+
 - **公開後の古いスタイル対策**
   新しいページやスタイルを公開した後、ユーザーに手動リロードを求めず、ページ側で同一オリジンの JS/CSS 参照変更を検出して一度だけ更新します。更新用の `__deploy_v` は `history.replaceState` で表示 URL から消し、Sakura 上の古い hash assets は「現在 + 直前」の世代だけ残し、cron 生成データやサーバー注入 HTML は保護します。
 
@@ -110,6 +121,7 @@ skills/
   sakura-ssh-deploy-setup/
   sakura-mailbox-setup/
   sakura-auth-site-setup/
+  cron-crawler-safety/
   static-deploy-refresh-check/
   public-page-seo-assist/
 ```
@@ -128,6 +140,10 @@ skills/
 
 ```text
 この Sakura ホストのサイトに、日本語ログイン、ユーザーグループ、登録確認メール、cron 失敗通知を追加するため、$sakura-auth-site-setup を使ってください。
+```
+
+```text
+cron で動く crawler を、二重起動防止、timeout、atomic write、last-good 保護、失敗時だけのメール通知付きにするため、$cron-crawler-safety を使ってください。
 ```
 
 ```text
@@ -151,6 +167,9 @@ skills/
 - 管理画面で編集できるメール項目は、原則として cron 失敗通知の受信先だけにする。
 - ユーザー DB、設定ファイル、cron ログは Web 公開ディレクトリの外に置く。
 - 登録確認 token は平文保存せず、hash と有効期限だけを保存する。
+- crawler は公開 API、feed、sitemap、またはアクセス許可された公開ページを優先する。paywall、CAPTCHA、login、bot 防御、rate limit を回避しない。
+- cron crawler は lock、timeout、request timeout、retry 上限、atomic write、出力 validation を持つ。失敗時だけメールし、成功・no-op・lock skip・予定された defer では通知しない。
+- crawler のログや通知には、cookie、authorization header、API key、個人情報、巨大な raw response を入れない。
 - 公開ページは、サイドバーの表示位置に関係なく、ロール権限設定に入れない。
 - 静的サイトの配布では、新しい hashed assets を先に上げ、最後に live `index.html` を上げる。
 - 静的ページの cache-busting は、同一ページの JS/CSS 参照変更だけを見て一度だけ更新し、読み込み後に `__deploy_v` を `history.replaceState` で URL から消す。生産 JSON、cron 出力、scraper 管理の SEO ブロックは触らない。
