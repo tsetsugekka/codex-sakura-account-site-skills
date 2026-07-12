@@ -1,4 +1,4 @@
 interface:
   display_name: "Public Page SEO Assist"
   short_description: "Public page SEO, cards, noscript, and time-safe snippets"
-  default_prompt: "Use $public-page-seo-assist to improve SEO for a public static page with safe meta tags, cards, noscript fallback, and no real data timestamps in Google snippets."
+  default_prompt: "Use $public-page-seo-assist to improve public-page SEO or private-page social previews with safe meta tags, cards, redirect-aware canonical URLs, noscript fallback where applicable, and no real data timestamps in Google snippets."

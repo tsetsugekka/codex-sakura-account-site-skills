@@ -1,15 +1,15 @@
 ---
 name: public-page-seo-assist
-description: Use when improving or auditing SEO for public indexable Sakura-hosted static pages, JavaScript app entry pages, dashboard/tool pages, or cron-updated pages with volatile timestamps.
+description: Use when improving or auditing metadata for public or private Sakura-hosted pages, JavaScript app entry pages, dashboard/tool pages, or cron-updated pages, especially when redirects or social previews show the wrong title or URL.
 ---
 
 # Public Page SEO Assist
 
 ## Goal
 
-Improve SEO for public pages without turning volatile app data into misleading Google publication dates.
+Improve SEO for public pages and social link previews for private pages without turning volatile app data into misleading Google publication dates or making protected routes indexable.
 
-Use this skill only for pages intended to be publicly indexable. For login-only, staff-only, or private pages, do not add indexable SEO fallback content; use `noindex` or the project's access-control pattern instead.
+Use this skill for both publicly indexable pages and private pages whose links are shared in chat or social applications. For login-only, staff-only, or private pages, do not add indexable SEO fallback content; use `noindex` and the project's access-control pattern while still providing safe, page-specific sharing metadata.
 
 This skill should align four public signals before considering the work complete:
 
@@ -18,14 +18,27 @@ This skill should align four public signals before considering the work complete
 - `sitemap.xml` `<loc>`,
 - the actual final public URL after redirects, trailing-slash handling, and extensionless aliases.
 
+For private pages, replace the sitemap/indexability signal with a protected share-preview signal:
+
+- `robots` must remain `noindex, nofollow`;
+- the page must not be added to `sitemap.xml`;
+- the final unauthenticated HTML should still have a page-specific `<title>`, description, canonical, `og:url`, and Twitter/Open Graph card;
+- metadata must describe the page purpose without exposing private records, user data, or volatile internal timestamps.
+
+## Private Page Sharing Cards
+
+When a private page is shared, social crawlers normally have no login cookie. Do not let the authentication layer redirect every private route to a generic portal URL, because the crawler will then use the portal's title and description. Preserve the requested internal path and query in a safe login return parameter, and render target-specific sharing metadata on the login/gate response. See `references/private-page-sharing-patterns.md`.
+
+This changes only the preview metadata, not access control: the actual private content and APIs remain protected. Keep AI Hub or other explicitly excluded subsystems on their existing behavior when their metadata is managed separately.
+
 Do not add `og:image` just to fill a checklist. A missing social image is better than a tiny favicon, stale screenshot, relative path, private asset, or low-quality preview.
 
 ## Workflow
 
-1. Confirm the page is public:
-   - route is not behind login,
-   - robots policy should be `index, follow`,
-   - page content is safe to expose in static HTML and search snippets.
+1. Classify the page before editing:
+   - public/indexable: route is not behind login, `robots` may be `index, follow`, and content is safe for search snippets;
+   - private/shareable: route is behind login or staff permission, `robots` must be `noindex, nofollow`, but link-preview metadata should identify the target page;
+   - excluded subsystem: follow the subsystem's own documented metadata rules.
 2. Inspect existing head tags, route aliases, build/deploy flow, and whether cron or server scripts write live data into the entry HTML.
 3. Add or repair the page-level SEO package:
    - stable `<title>`,
@@ -38,6 +51,7 @@ Do not add `og:image` just to fill a checklist. A missing social image is better
    - `og:site_name`,
    - favicon/touch icon if the project has them,
    - `robots` only when appropriate.
+   - For private pages, use the private share-preview pattern instead of indexable fallback content.
 4. Decide whether the page should have `og:image`:
    - add it only for a stable, high-quality, public, absolute URL image,
    - do not use favicon or small icon files as the fallback social image,
@@ -75,6 +89,7 @@ Do not add `og:image` just to fill a checklist. A missing social image is better
 
 - Read `references/public-page-seo-patterns.md` before adding or restructuring SEO head/body fallback.
 - Read `references/time-snippet-safety.md` whenever the page has update times, post times, news times, generated-at labels, or reviewed/updated states.
+- Read `references/private-page-sharing-patterns.md` for login-only, staff-only, or otherwise protected routes that need correct social/link previews.
 
 ## Public Page Pattern
 
@@ -143,6 +158,10 @@ Rules:
 - Do not add hidden keyword stuffing.
 - Do not put private, paid, draft, or login-only details into `noscript`.
 - Do not put real dates or times in static SEO fallback.
+
+## Private Page Sharing Verification
+
+For private routes, test an unauthenticated request through the full redirect chain. The return parameter must preserve only an internal path/query, the final HTML must use target-specific title/description/canonical/OG/Twitter metadata, and `robots` must remain `noindex, nofollow`. Open Graph controls the preview card; the visible URL/title line is controlled by the sharing client or explicit share action.
 
 ## Safety Rules
 
