@@ -33,18 +33,18 @@ Do not redirect every protected page to `/` without context. A social crawler fo
 The unauthenticated gate response may be a metadata-only/login page, but it should identify the intended target:
 
 ```html
-<title>キャンペーン - P-Monitor</title>
+<title>キャンペーン - Example Monitor</title>
 <link rel="canonical" href="https://example.com/private-tool/campaign/">
 <meta name="description" content="キャンペーンに関する情報を確認するページです。">
 <meta name="robots" content="noindex, nofollow">
 <meta property="og:type" content="website">
-<meta property="og:title" content="キャンペーン - P-Monitor">
+<meta property="og:title" content="キャンペーン - Example Monitor">
 <meta property="og:description" content="キャンペーンに関する情報を確認するページです。">
 <meta property="og:url" content="https://example.com/private-tool/campaign/">
 <meta property="og:locale" content="ja_JP">
 <meta property="og:site_name" content="Example Site">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="キャンペーン - P-Monitor">
+<meta name="twitter:title" content="キャンペーン - Example Monitor">
 <meta name="twitter:description" content="キャンペーンに関する情報を確認するページです。">
 ```
 
