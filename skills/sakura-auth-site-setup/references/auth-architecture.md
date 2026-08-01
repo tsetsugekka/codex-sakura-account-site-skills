@@ -18,6 +18,11 @@ Recommended API endpoints:
 /api/logout.php
 /api/register.php
 /api/verify-email.php
+/api/resend-verification.php
+/api/request-password-reset.php
+/api/reset-password.php
+/api/change-email.php
+/api/change-password.php
 /api/access.php
 /api/account.php
 /api/supervisor.php
@@ -33,6 +38,8 @@ User record fields:
   "emailVerifiedAt": "",
   "emailVerificationTokenHash": "",
   "emailVerificationExpiresAt": "",
+  "passwordResetTokenHash": "",
+  "passwordResetExpiresAt": "",
   "passwordHash": "password_hash output",
   "role": "user",
   "disabled": true,
@@ -46,16 +53,24 @@ Rules:
 - Keep page permissions in role/group records. Do not store per-user page grants unless the project explicitly requires an exception.
 - Store password hashes with PHP `password_hash`.
 - Generate verification tokens with cryptographic randomness.
-- Store only `hash('sha256', token)`.
+- Store verification and reset tokens only as `hash('sha256', token)` with a separate purpose and expiry.
 - Expire verification links, commonly after 24 hours.
+- Expire password-reset links more quickly, commonly after one hour, and make them single-use.
+- Return generic responses from resend and reset-request endpoints so callers cannot enumerate accounts.
+- Apply cooldowns to verification resend and password-reset mail.
+- Invalidate the user's existing sessions after a password reset, password change, disable, or administrative revocation.
 - Regenerate session ID on login and verification success.
 - Use `HttpOnly`, `SameSite=Lax`, and `Secure` on HTTPS.
+- Bootstrap a cryptographically random CSRF token and require it on cookie-authenticated mutations, including anonymous-facing account POST flows according to the site's bootstrap policy.
+- Build verification/reset URLs from an explicit private public-base-URL setting. Do not trust an arbitrary request Host header.
 - Use file locks and temporary-file-plus-rename writes when the lightweight store is JSON.
 - Make the bootstrap admin fixed full access and prevent deleting or downgrading it through the UI.
 - Keep registration closed by default; when opened, create a disabled/pending user or assign a pending group until email verification succeeds.
 - After verification, move the user to `user` unless the user explicitly requested another default role or an admin approval step.
 - Do not choose `demo` as the verified default role unless the project owner explicitly requested it.
 - Role names are project configuration, not universal UI copy. A common pattern is `unverified` or `pending` for pre-verification registrations, `user` for normal verified users, and `admin` for fixed full access.
+- Keep user preferences and user-owned data keyed by a stable opaque user id, not by mutable display names or emails.
+- Keep session indexes or revocation metadata private so all sessions for one account can be invalidated.
 
 Role catalog pattern:
 

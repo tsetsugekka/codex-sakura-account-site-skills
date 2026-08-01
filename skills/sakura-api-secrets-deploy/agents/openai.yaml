@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sakura API Secrets Deploy"
+  short_description: "Secure Sakura API credentials and gateways"
+  default_prompt: "Use $sakura-api-secrets-deploy to centralize API credentials outside the web root, protect every server endpoint, and deploy the change safely on Sakura Server."

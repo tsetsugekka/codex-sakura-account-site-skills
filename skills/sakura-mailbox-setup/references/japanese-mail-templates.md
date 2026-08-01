@@ -1,5 +1,7 @@
 # Japanese Mail Templates
 
+These templates cover message composition only. The caller must generate and validate purpose-bound, hashed, expiring, single-use authentication tokens. Do not log the URLs or token values.
+
 ## Cron Failure Recipient Confirmation
 
 Subject:
@@ -56,3 +58,27 @@ Body:
 
 詳細と直近ログを下に記載します。
 ```
+
+## Password Reset
+
+Subject:
+
+```text
+パスワード再設定のご案内
+```
+
+Body:
+
+```text
+パスワード再設定のリクエストを受け付けました。
+
+1 時間以内に次のリンクを開き、新しいパスワードを設定してください。
+
+{password_reset_url}
+
+この操作に心当たりがない場合は、このメールを無視してください。現在のパスワードは変更されません。
+```
+
+## Verification Resend
+
+Use the Account Verification template with a newly generated URL. The authentication layer must invalidate the previous verification token so only the latest link remains valid.

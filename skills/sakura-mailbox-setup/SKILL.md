@@ -11,6 +11,8 @@ Use a real Sakura mailbox as the website notification sender so account verifica
 
 Do not mark this skill complete until a real sender mailbox has either been created or its existence has been confirmed.
 
+This skill provides mail delivery infrastructure, not the registration/authentication state machine. For verification-token generation, resend cooldowns, password-reset tokens, account state transitions, sessions, CSRF, and user-group permissions, use `sakura-auth-site-setup`. Mailbox readiness means the site has a confirmed sender and a verified server-side sending path; it does not mean registration verification or password recovery is implemented.
+
 If the user authorizes browser/computer use, Codex should handle the Sakura Control Panel mailbox creation flow in an isolated browser context that does not disturb the user's active browsing. Prefer the Codex in-app browser when available; it is the default isolated browser surface for Sakura Control Panel automation. Reuse an existing authenticated Sakura Control Panel session only when it is available in that isolated context, or when the user explicitly permits Codex to operate the currently open browser session. Do not ask the user to log in again unless the isolated session is missing, expired, or requires fresh confirmation. Do not default to telling the user to create the mailbox manually.
 
 Label credentials by source and scope. On Sakura Rental Server, the server account/domain password is used for both SSH/SFTP and Sakura Control Panel login. If an ignored local secret was collected as Sakura server credentials, reuse those values for both SSH/SFTP and control-panel login without printing them. Do not assume unrelated FTP, hosting, or generic deploy passwords are valid for the control panel.
@@ -47,6 +49,7 @@ Label credentials by source and scope. On Sakura Rental Server, the server accou
    - envelope sender.
 11. Keep admin UI limited to runtime notification recipients, usually only cron failure recipient and a test-send action.
 12. Keep mail body in Japanese by default. Add other languages only if the site requires it.
+    - For account mail, accept the one-time URL and purpose from `sakura-auth-site-setup`; do not generate, store, validate, or log authentication tokens in the mailbox layer.
 13. Send a harmless test email to the configured recipient.
 14. Treat `mail()` or sendmail success as "server accepted the message for delivery", not as recipient inbox delivery. UI and reports must say this clearly.
 15. If the user does not receive the message, check the sender mailbox and postmaster mailbox for bounces, inspect recent message headers, and check MX/SPF/DKIM/DMARC before changing application save logic.
@@ -105,6 +108,8 @@ Use `scripts/check_mail_dns.sh example.com notify@example.com` to collect DNS an
 - Do not print local secret file contents, control-panel credentials, generated mailbox passwords, or SSH passwords.
 - Do not ask for repeated confirmations for normal recoverable steps after the user has broadly delegated the task.
 - Do not claim completion when mailbox creation is still a manual TODO.
+- Do not claim the account verification or password-reset lifecycle is complete merely because the mailbox and sendmail path work.
+- Do not implement account token storage, role transitions, sessions, or CSRF inside the mailbox layer; compose with `sakura-auth-site-setup`.
 - Do not say "mail configured" after only changing code over SSH; the Sakura mailbox must be created or confirmed first.
 - Do not expose site name, public URL, From address, From name, or envelope sender as admin UI fields.
 - Do not store sender infrastructure values in an admin-editable `site_settings.json`.

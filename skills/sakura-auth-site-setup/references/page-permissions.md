@@ -43,6 +43,7 @@ Protected page entrypoints should inject a small runtime contract into the page.
 window.SITE_AUTH = {
   path: "/example-tool/",
   pagePermission: "operate",
+  csrfToken: "session-bound-token",
   permissions: [
     { key: "read", label: "閲覧のみ" },
     { key: "operate", label: "操作可能" },
@@ -53,6 +54,20 @@ window.SITE_AUTH = {
 ```
 
 Page code must read `pagePermission`. It must not infer behavior from role names. If the page has its own API, the API must enforce the same permission server-side.
+
+For each business API:
+
+1. Require the expected method.
+2. Require login.
+3. Resolve the user's permission for that page.
+4. Require the minimum page-defined key for the operation.
+5. Require CSRF for cookie-authenticated mutations, quota calls, task control, or uploads.
+6. Only then read the request body, credential, job, upload, or private record.
+7. For user-owned data, also require ownership or an explicit administrator capability.
+
+Do not assume `/example-tool/` protection also protects `/example-tool/api/*.php`. Every endpoint repeats the server-side decision. When permission keys are ordered, compare through the page's declared order rather than hardcoding role names or a global rank table.
+
+The runtime CSRF token is a session secret, not an API credential. Inject it only into authenticated same-origin pages, never into public static files or logs.
 
 When handing work to another page-building thread, pass the permission contract document and the exact page permission keys. The page thread should not invent global permission levels.
 

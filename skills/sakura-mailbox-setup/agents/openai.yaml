@@ -1,4 +1,4 @@
 interface:
   display_name: "Sakura Mailbox Setup"
   short_description: "Create or confirm Sakura mailbox delivery"
-  default_prompt: "Use $sakura-mailbox-setup to create or confirm the real Sakura sender mailbox in the Codex in-app browser when available, configure private sender settings and complete PHP mail headers, keep saving notification recipients separate from test delivery, and distinguish server-accepted mail from recipient inbox delivery."
+  default_prompt: "Use $sakura-mailbox-setup to create or confirm the Sakura sender mailbox, private sender settings, DNS, PHP/sendmail headers, and delivery checks; compose with $sakura-auth-site-setup for registration verification and password recovery logic."

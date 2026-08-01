@@ -1,4 +1,4 @@
 interface:
   display_name: "Sakura Auth Site Setup"
-  short_description: "Build Sakura sites with Japanese auth"
-  default_prompt: "Use $sakura-auth-site-setup to add Japanese auth, registration verification, and cron alerts, and require a confirmed Sakura sender mailbox before calling mail delivery complete."
+  short_description: "Build Sakura auth, recovery, and permissions"
+  default_prompt: "Use $sakura-auth-site-setup to build registration verification, password recovery, secure sessions, CSRF, user groups, and page/API permissions, composing with $sakura-mailbox-setup for Sakura mail delivery."

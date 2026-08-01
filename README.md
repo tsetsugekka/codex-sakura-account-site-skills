@@ -1,6 +1,6 @@
 # Sakura Account Site Skills
 
-> Sakura Server 上に、SSH 配布・メール送信元・認証付き Web サイト・cron/crawler 運用・公開ページ SEO を安全に整えるための Codex Skill Suite。
+> Sakura Server 上に、SSH 配布・メール送信元・認証付き Web サイト・API 秘密情報・cron/crawler 運用・公開ページ SEO を安全に整えるための Codex Skill Suite。
 
 ![Skill Suite](https://img.shields.io/badge/Codex-Skill%20Suite-4f46e5)
 ![Sakura Server](https://img.shields.io/badge/Sakura%20Server-ready-22c55e)
@@ -13,7 +13,19 @@
 
 既存の Sakura 運用で使った安全な型を、公開できる形に抽象化しています。実ドメイン、実ユーザー名、サーバーパス、メールアドレス、パスワード、運用ログは含めません。
 
-主なゴールは次の 6 つです。どの skill を使うかは、「今なにを作りたいか」で選びます。
+## 収録 Skill
+
+| Skill | 主な用途 |
+| --- | --- |
+| `sakura-ssh-deploy-setup` | local-only secret と SFTP allowlist による安全な SSH 配布 |
+| `sakura-mailbox-setup` | Sakura mailbox、DNS、sender、PHP/sendmail、配信確認 |
+| `sakura-auth-site-setup` | 登録、メール確認、パスワード回復、session、role/page/API 権限 |
+| `sakura-api-secrets-deploy` | API key の private store、runtime resolver、API gate、CSRF、SSRF、防漏洩 deploy |
+| `cron-crawler-safety` | crawler の throttle、lock、atomic write、failure-only alert |
+| `static-deploy-refresh-check` | stale asset 回避、live data 保護、旧 hash asset cleanup |
+| `public-page-seo-assist` | 公開 SPA/静的ページの metadata、noscript、SEO marker |
+
+主なゴールは次の 7 つです。どの skill を使うかは、「今なにを作りたいか」で選びます。
 
 ### 1. Sakura への自動デプロイ準備
 
@@ -35,11 +47,19 @@
 
 `sakura-auth-site-setup`
 
-- **困りごと:** Sakura 上のサイトにログイン、ユーザーグループ、ページ権限、登録確認メール、管理画面を追加したい。
-- **Codex がすること:** ユーザー保存場所、password hash、メール確認 token、ロール別ページ権限、管理画面、cron 失敗通知設定をサイトに組み込む。
-- **できあがる状態:** 登録確認後のユーザー、staff/admin などの権限、保護ページ、管理画面を持つアカウント制サイトになる。
+- **困りごと:** Sakura 上のサイトにログイン、メール確認付き登録、確認メール再送、メールからのパスワード再設定、ユーザーグループ、ページ/API 権限、管理画面を追加したい。
+- **Codex がすること:** private user store、password hash、CSRF、session 失効、確認/再設定 token の hash・期限・単回使用、ロール別ページ権限、保護 API、管理画面を組み込む。実メールボックスと配信基盤は `sakura-mailbox-setup` と組み合わせる。
+- **できあがる状態:** 登録・メール確認・パスワード回復・ユーザーグループ・保護ページ/API・管理画面を持つアカウント制サイトになる。
 
-### 4. cron・crawler の安全運用
+### 4. API と環境変数の安全な配備
+
+`sakura-api-secrets-deploy`
+
+- **困りごと:** 外部 API key を Sakura の PHP、Python、cron から共通利用したいが、`.env` の公開、鍵ファイルの分散、無認証 proxy、CSRF、SSRF、配布 manifest への混入が怖い。
+- **Codex がすること:** web root 外の単一 private store、canonical 変数名、PHP/Python/shell 共通 resolver、ページ権限と CSRF、bearer API の分離、include-only/CLI-only 制御、URL fetch の SSRF 防御、段階的 migration と低頻度検証を整える。
+- **できあがる状態:** 秘密値をブラウザや Git に出さず、全 business API が用途に合う門番を持ち、SFTP allowlist で安全に配備・検証できる。
+
+### 5. cron・crawler の安全運用
 
 `cron-crawler-safety`
 
@@ -47,7 +67,7 @@
 - **Codex がすること:** まず既存の cron wrapper、Python/JS crawler、README/SPEC/CHANGELOG を読み、実際の運用から data ownership、cache、batch、SEO marker、restore 手順を確認する。そのうえで per-host random sleep、lock/stamp、timeout、atomic write、last-good 保護、failure-only mail、ログ、デプロイ時の live HTML marker マージを整える。
 - **できあがる状態:** crawler は source に連続高頻度アクセスせず、失敗時だけ通知し、成功・lock skip・no-op・予定された defer ではメールしない。公開 JSON/HTML は壊れにくく、cron が作った live data や `<noscript>` SEO をデプロイで消しにくくなる。
 
-### 5. 静的ページ公開後の表示崩れ・古いファイル対策
+### 6. 静的ページ公開後の表示崩れ・古いファイル対策
 
 `static-deploy-refresh-check`
 
@@ -55,7 +75,7 @@
 - **Codex がすること:** ページに一度だけ動く更新チェックを入れ、古い hashed assets は「現在 + 直前」だけ残す運用にし、live data と cron 注入済み HTML を保護する。
 - **できあがる状態:** ユーザーに手動リロードを頼まず新しい表示へ移行でき、更新用の `__deploy_v` は読み込み後に URL から消え、Sakura 上の不要な古い assets も安全に整理できる。
 
-### 6. 公開ページの SEO 補強
+### 7. 公開ページの SEO 補強
 
 `public-page-seo-assist`
 
@@ -108,6 +128,12 @@ GitHub 新規リポジトリ作成、初回 commit/push、以後の intended bra
 - **ページ権限の引き継ぎを明確化**
   ロールごとのページ権限はアカウントシステムが保持し、保護ページの PHP 入口が `window.SITE_AUTH.pagePermission` のような実行時値を注入します。ページ側はロール名ではなく、そのページ用の permission key を見ます。
 
+- **API key と business API の境界を統一**
+  API key は web root 外の単一 private store に置き、PHP・Python・cron で同じ canonical name と解決順序を使います。browser API は server-side login・page permission・CSRF、bearer API は token scope、共通 PHP は direct `404`、worker は HTTP `404` に分けます。status UI は値、private path、raw upstream body を返しません。
+
+- **認証ロジックとメール基盤を分離して連携**
+  `sakura-auth-site-setup` は確認/再設定 token、account state、session、CSRF、role permission を担当し、`sakura-mailbox-setup` は Sakura mailbox、DNS、From/envelope sender、sendmail/PHP mail、delivery verification を担当します。どちらか一方だけで登録メール認証完了とは扱いません。
+
 - **日本語サイト向け**  
   認証画面、管理画面、通知メールは日本語を標準にします。必要に応じて多言語化できます。
 
@@ -121,6 +147,7 @@ skills/
   sakura-ssh-deploy-setup/
   sakura-mailbox-setup/
   sakura-auth-site-setup/
+  sakura-api-secrets-deploy/
   cron-crawler-safety/
   static-deploy-refresh-check/
   public-page-seo-assist/
@@ -139,7 +166,11 @@ skills/
 ```
 
 ```text
-この Sakura ホストのサイトに、日本語ログイン、ユーザーグループ、登録確認メール、cron 失敗通知を追加するため、$sakura-auth-site-setup を使ってください。
+この Sakura ホストのサイトに、日本語ログイン、メール確認付き登録、確認メール再送、メールからのパスワード再設定、ユーザーグループ、ページ/API 権限を追加し、$sakura-mailbox-setup の実メール送信基盤と連携するため、$sakura-auth-site-setup を使ってください。
+```
+
+```text
+この Sakura サイトの PHP・Python・cron で使う API key を web root 外へ統合し、すべての business API に認証・ページ権限・CSRF と SSRF 防御を入れて安全に配備するため、$sakura-api-secrets-deploy を使ってください。
 ```
 
 ```text
@@ -167,6 +198,11 @@ cron で動く crawler を、二重起動防止、timeout、atomic write、last-
 - 管理画面で編集できるメール項目は、原則として cron 失敗通知の受信先だけにする。
 - ユーザー DB、設定ファイル、cron ログは Web 公開ディレクトリの外に置く。
 - 登録確認 token は平文保存せず、hash と有効期限だけを保存する。
+- パスワード再設定 token も hash・目的・有効期限・単回使用で扱い、再設定成功後は既存 session を失効する。確認再送と再設定依頼は account enumeration を避ける応答と cooldown を持つ。
+- 認証系の token lifecycle、role transition、session、CSRF は `sakura-auth-site-setup` が担当し、mailbox skill は token を生成・保存・検証・記録しない。
+- API credential は web root 外の単一 private store に置き、directory `0700`・file `0600`、process environment 優先、managed private config fallback、未設定は明示、という共通契約で読む。
+- browser-facing business API はページ入口とは別に server-side login と page permission を検証し、cookie 認証の mutation・quota call・job control は CSRF を必須にする。
+- user-controlled URL fetch は public HTTP(S) の必要 port だけを許可し、A/AAAA、private/loopback/link-local/reserved address、DNS pinning、redirect 各 hop、size/timeout を検証する。
 - crawler は公開 API、feed、sitemap、またはアクセス許可されたページを優先する。認証が必要な場合は、権限のある公式 API、正規ログイン、ユーザー承認済み session、ブラウザ操作、または手動 export を使う。paywall、CAPTCHA、login、bot 防御、rate limit に遭遇した場合、Codex は独断で回避しない。まず開発を止めてユーザーと十分に相談し、ユーザーにアクセス権、目的、リスク、許容できる方法を論証してもらってから次の進め方を決める。source 側の制限に対しては、cache、slot、batch 上限、per-host throttle、random sleep、retry 上限で運用する。
 - 同じ host に対して高頻度・無間隔で連続 request しない。URL が違っても host が同じなら per-host throttle を通し、ランダム sleep/jitter を入れる。
 - cron crawler は既存の README/SPEC/CHANGELOG と実スクリプトを確認してから変更する。lock、stamp、timeout、request timeout、retry 上限、batch 上限、atomic write、出力 validation を持つ。失敗時だけメールし、成功・no-op・lock skip・予定された defer では通知しない。

@@ -1,88 +1,140 @@
 ---
 name: sakura-auth-site-setup
-description: Add a Japanese account system to a Sakura-hosted website. Use when Codex needs to implement user groups, registration with email verification, cron failure notification settings, role-based page permissions, an admin/supervisor screen that matches the existing site style, safe storage outside the public web root, and a rule that mail delivery is not complete until the Sakura sender mailbox is created or confirmed.
+description: Build or upgrade a production account and authorization system for a Sakura-hosted website. Use when Codex needs registration with email verification, resend-verification and forgot-password flows, one-time password reset, login/session/CSRF security, email or password changes, user groups and role assignment, role-level page permissions, protected page and API contracts, an admin/supervisor UI, private storage outside the web root, and integration with sakura-mailbox-setup for the real Sakura sender and delivery infrastructure.
 ---
 
 # Sakura Auth Site Setup
 
 ## Goal
 
-Add a production-ready account system to a Sakura-hosted website while preserving the existing site's visual style. Mail delivery is production-ready only after the real Sakura sender mailbox is created or confirmed.
+Build a production account system that owns identity, account lifecycle, user groups, page permissions, session security, and server-side API authorization while preserving the existing site's visual style.
 
-This skill builds the Sakura-hosted account system. If the project also needs GitHub repository creation, initial commit/push, or ongoing Codex publish discipline, use/install the companion skill `github-repo-publish-setup`; do not duplicate GitHub workflow rules here.
+Use `sakura-mailbox-setup` for Sakura mailbox creation/confirmation, DNS, sender configuration, PHP/sendmail integration, and delivery testing. This skill owns why and when verification/reset messages are sent, token lifecycle, account state transitions, and authorization. Mailbox readiness alone does not mean registration authentication is complete.
+
+Use `sakura-api-secrets-deploy` when protected pages call paid or credentialed external APIs. Use `github-repo-publish-setup` for GitHub creation and publishing.
+
+## Responsibility Boundary
+
+`sakura-auth-site-setup` owns:
+
+- registration, login, logout, and session bootstrap,
+- email verification and safe resend behavior,
+- forgot-password request and single-use password reset,
+- authenticated email/password changes and optional account deletion,
+- user groups, role assignment, and role-level page permissions,
+- protected page entrypoints and business API enforcement,
+- CSRF, session invalidation, rate limits, and account-enumeration controls,
+- admin account/role/permission screens.
+
+`sakura-mailbox-setup` owns:
+
+- creating or confirming the real Sakura sender mailbox,
+- MX/SPF/DKIM/DMARC and sender-domain checks,
+- private From/display name/envelope-sender configuration,
+- complete message headers and server acceptance tests,
+- diagnosing bounces and accepted-versus-delivered status.
+
+Do not duplicate Sakura Control Panel mailbox steps here. Invoke the mailbox skill and consume its confirmed private sender configuration.
 
 ## Core Requirements
 
-- Japanese UI and Japanese email by default.
-- User records stored outside the public web root.
-- Passwords stored with a modern password hash, never plaintext.
-- Registration disabled by default unless explicitly enabled.
-- Registration requires email verification before login.
-- New registrations stay disabled or in a pending group until email verification.
-- Verified users default to the `user` group unless the user explicitly requested another default group.
-- Do not default verified registrations to `demo`.
-- Role groups control page access.
-- Page permissions are saved on roles/user groups, not individual users.
-- Protected page entrypoints inject a server-evaluated page permission value for the page using a project-scoped runtime global.
-- Page UI and page APIs enforce page-defined permission keys; do not infer behavior from global role names.
-- Admin/supervisor page edits users, roles, page permissions, and cron failure recipient only.
-- Admin/supervisor page must not edit site name, public URL, From address, From display name, or envelope sender.
-- Cron jobs send email only on failures, never on success.
-- Mail sender uses a real mailbox created or confirmed through `sakura-mailbox-setup`.
+- Keep user records, settings, preferences, tokens, session indexes, locks, and logs outside the public web root.
+- Use modern password hashing, preferably Argon2id when available, through `password_hash`/`password_verify`.
+- Keep registration disabled by default unless the operator explicitly enables it.
+- Do not auto-login a newly submitted registration.
+- Require email verification before granting the normal verified group or privileged page access.
+- Store verification and reset tokens only as cryptographic hashes with expiry, purpose, and single-use semantics.
+- Use generic responses for reset/resend paths when a response could reveal whether an account exists.
+- Keep page permissions on roles/user groups, never directly on individual users.
+- Let each page define its own ordered permission keys; do not invent one global permission enum.
+- Make protected page UI read the server-evaluated page permission. Do not infer capabilities from role names.
+- Enforce the same permission inside every page-specific API before reading private data or performing work.
+- Require CSRF on all cookie-authenticated mutations, including login/logout, registration, resend, reset completion, profile changes, role changes, and admin actions.
+- Treat intentionally anonymous account lifecycle APIs as explicit exceptions, not as a reason to leave business APIs public.
+- Fix the bootstrap administrator at full access and prevent UI/API deletion or downgrade.
+- Keep infrastructure values such as site name, public base URL, From address/name, envelope sender, OAuth credentials, and API credentials out of admin-editable JSON and forms.
 
 ## Workflow
 
-1. Inspect the existing site stack, routing, style system, and deploy process.
-2. Define private storage paths outside `www`.
-3. Add authentication API endpoints.
-4. Add session and page access checks.
-5. Confirm the sender mailbox through `sakura-mailbox-setup` before claiming registration email or cron email is production-ready.
-6. Add role model:
-   - a pending group such as `unverified`: newly registered users before email verification.
-   - a default group such as `user`: normal verified users.
-   - optional groups such as `staff`: limited private pages.
-   - `admin`: fixed full access.
-7. Add registration:
-   - disabled by default,
-   - requires email,
-   - creates disabled pending user or assigns the pending group,
-   - stores only token hash and expiry,
-   - sends Japanese verification email,
-   - enables or promotes the user to `user` after verification unless the user explicitly requested another policy.
-8. Add admin/supervisor UI:
-   - match the existing navigation, header, card, form, and input style,
-   - no marketing landing page,
-   - compact operational layout,
-   - permission controls only for actually protected pages,
-   - public pages stay public even if they are shown in a staff-like navigation group,
-   - cron notification UI contains the failure-recipient email and optional test-send action only,
-   - no fields for site name, public URL, From address, From name, or envelope sender.
-9. Add cron failure notification setting:
-   - save recipient in private settings file,
-   - send Japanese confirmation mail when non-empty,
-   - wrappers send failure email on non-zero status only.
-10. Add protected page handoff:
-   - central account code decides whether a request may enter the page,
-   - the entry PHP injects a project-scoped global such as `window.SITE_AUTH.pagePermission`,
-   - the page reads that value for buttons/forms/features,
-   - page-specific APIs repeat the same permission check server-side.
-11. Deploy and verify:
-   - PHP syntax,
-   - shell/Python cron syntax,
-   - registration remains closed by default,
-   - invalid verification token returns safe error,
-   - public pages remain public,
-   - protected pages deny anonymous access,
-   - verified registration creates or promotes the user to `user`, not `demo`,
-   - admin mail UI does not contain `サイト名`, `公開URL`, `送信元メール`, or `送信元名`,
-   - test mail is accepted by the server.
+1. Inspect the current stack, routes, session model, existing users, public/protected page catalog, styles, deploy manifests, mailbox state, and all account/business APIs.
+2. Write down the boundary between public lifecycle APIs, protected account APIs, protected business APIs, CLI workers, and include-only libraries.
+3. Define private storage and configuration. Read `references/auth-architecture.md`.
+4. Define the account lifecycle. Read `references/account-lifecycle.md`.
+5. Invoke `sakura-mailbox-setup` to create or confirm the sender and private mail configuration before claiming verification/reset mail is production-ready.
+6. Implement or upgrade session security:
+   - secure cookie attributes,
+   - session ID regeneration after authentication/privilege change,
+   - CSRF bootstrap and constant-time validation,
+   - session invalidation on password reset, password change, account disable, and admin revocation.
+7. Implement role/group authorization:
+   - `unverified` or `pending`,
+   - normal verified `user`,
+   - optional operator/staff groups,
+   - fixed full-access `admin`,
+   - optional documented automatic assignment rules such as approved email domains or campaign codes.
+8. Define page permissions with the consuming page. Read `references/page-permissions.md`.
+9. Protect the page entrypoint and inject a minimal project-scoped runtime contract containing the current page permission and CSRF token. Never inject hashes, uid internals, secrets, or private paths.
+10. Protect every page API server-side. Mutations must validate method, session, page permission, and CSRF before reading the request body, credential, job, upload, or private record.
+11. Build the admin/supervisor UI:
+   - account list and state,
+   - role/group assignment,
+   - role-level page permissions,
+   - protected bootstrap admin,
+   - optional cron failure recipient and safe test-send action,
+   - no infrastructure sender/public URL/API key fields.
+12. Match the existing site style. Read `references/ui-guidelines.md`.
+13. Wrap scheduled jobs only when requested. Read `references/cron-alerts.md`.
+14. Deploy through exact-file manifests and verify both anonymous and authorized behavior.
 
-If the real sender mailbox is not created or confirmed, report that mail delivery remains blocked instead of saying the mail features are complete.
+## Required Endpoint Set
+
+Adapt names to the existing routing, but cover these responsibilities:
+
+```text
+session / csrf bootstrap
+login
+logout
+register
+verify email
+resend verification
+request password reset
+complete password reset
+change email
+change password
+account preferences or self-service account action
+page access check
+admin users
+admin roles and role permissions
+admin runtime settings
+```
+
+Optional OAuth endpoints remain separate and must use state/nonce, explicit callback origins, and private client credentials.
+
+## Verification Matrix
+
+- Registration is closed by default and opens only through private configuration.
+- Registration never logs the new user in automatically.
+- Verification and reset records contain hashes, not raw tokens.
+- Expired, malformed, reused, wrong-purpose, and revoked tokens fail safely.
+- Reset/resend public responses do not disclose account existence.
+- Password reset invalidates existing sessions.
+- Anonymous requests cannot reach protected pages or business APIs.
+- A lower page permission cannot invoke a higher-permission API even if the UI button is manually re-enabled.
+- Cookie-authenticated mutations without valid CSRF fail before state changes.
+- Public pages remain public and do not appear in role-permission controls.
+- Role changes affect users through group membership; no hidden per-user page grant remains.
+- Bootstrap admin cannot be disabled, deleted, or downgraded through UI or API.
+- Admin mail settings do not expose site name, public URL, From address/name, envelope sender, mailbox password, OAuth secret, or API key.
+- Mail tests are reported as server accepted for delivery unless authoritative delivery is confirmed.
+- PHP syntax, account lifecycle tests, role/permission tests, CSRF tests, and deployment manifests pass.
+
+If the sender mailbox is not created or confirmed, report the mail-dependent lifecycle as blocked. If the account APIs are not deployed and verified, do not call the account system complete.
 
 ## References
 
 - Read `references/auth-architecture.md` before implementation.
-- Read `references/page-permissions.md` when deciding what belongs in the admin permission screen.
+- Read `references/account-lifecycle.md` before registration, verification, resend, reset, email change, or password change work.
+- Read `references/page-permissions.md` before changing roles, page access, runtime contracts, or business APIs.
 - Read `references/cron-alerts.md` when wrapping scheduled jobs.
 - Read `references/ui-guidelines.md` before editing admin screens.
 
@@ -92,10 +144,12 @@ If the real sender mailbox is not created or confirmed, report that mail deliver
 
 ## Safety Rules
 
-- Do not include real usernames, passwords, mailbox passwords, or production user JSON in commits.
-- Do not put private settings, user DB, verification tokens, or logs under the public web root.
-- Do not redirect old admin paths to new hidden paths if the user explicitly wants no redirect.
-- Do not silently make public pages protected or protected pages public; document permission changes.
-- Do not put a public page in the admin permission screen only because it appears in a staff-only sidebar group.
-- Do not make infrastructure mail sender settings editable from the admin UI.
-- Do not implement ad hoc GitHub repo creation or publish rules inside this skill; use the separate `github-repo-publish-setup` companion when needed.
+- Never commit real users, password hashes, emails, tokens, sessions, mailbox passwords, OAuth secrets, API keys, production settings, or logs.
+- Never place private account data or configuration under the public web root.
+- Never use a request Host header as the sole source for verification/reset callback URLs; use an explicit private public-base-URL setting.
+- Never put raw tokens in storage or logs.
+- Never authorize a business API only because its page entrypoint is protected.
+- Never rely on front-end button visibility as authorization.
+- Never silently change whether a page is public or protected.
+- Never make sender infrastructure or credentials editable in the admin UI.
+- Never claim email delivery from a successful `mail()` return alone.
