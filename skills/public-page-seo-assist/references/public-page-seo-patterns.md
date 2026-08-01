@@ -6,6 +6,7 @@ Use this reference when adding SEO to a public static page, Vite app, or JavaScr
 
 Every public page should have:
 
+- `meta charset="UTF-8"` near the start of `<head>`, within the first 1024 bytes and before executable scripts.
 - `lang` on `<html>`, usually `ja` for Japanese pages.
 - One stable `<title>`.
 - One concise `meta description` written for humans.
@@ -25,6 +26,8 @@ Every public page should have:
 - Favicons/touch icons matching the project.
 
 Keep titles stable. Use body text and `noscript` for secondary search intents rather than stuffing the title with every keyword.
+
+Put charset, viewport, title, description, canonical, Open Graph, and Twitter metadata before analytics, import maps, app boot scripts, and blocking third-party scripts. JSON-LD may follow the card metadata. This gives encoding and link-preview crawlers a deterministic initial head without depending on JavaScript execution.
 
 ## URL Signal Consistency
 
@@ -143,8 +146,17 @@ Open Graph and Twitter cards are for social/link previews, not the full SEO body
 <meta property="og:title" content="24時間出来事 - 市場ナラティブ速報">
 <meta property="og:description" content="主要Xアカウントの市場関連発言を追跡し、重要な市場ナラティブを整理します。">
 <meta property="og:url" content="https://example.com/tools/24hfeed/">
+<meta property="og:site_name" content="Example Market Tools">
+<meta property="og:locale" content="ja_JP">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="24時間出来事 - 市場ナラティブ速報">
+<meta name="twitter:description" content="主要Xアカウントの市場関連発言を追跡し、重要な市場ナラティブを整理します。">
 ```
+
+The Open Graph protocol defines `og:title`, `og:type`, `og:image`, and `og:url` as its four basic required properties. In practice, a text-only fallback can still work in some clients, but it is not a protocol-complete image card and its rendering is client-dependent. Treat the two cases separately:
+
+- Maximum cross-platform reliability: provide a real, representative `og:image` and the complete image metadata below.
+- Intentional text-only fallback: omit weak or misleading imagery, keep title/description/site/URL metadata complete, and accept that some clients may show only a compact link.
 
 Use `og:image`, `twitter:image`, and `summary_large_image` only when:
 
@@ -154,6 +166,22 @@ Use `og:image`, `twitter:image`, and `summary_large_image` only when:
 - the image is large and clear enough for a social card,
 - the image will not expose private data or old market timestamps.
 
+For an image card, use this order so each structured image property is associated with the intended root image:
+
+```html
+<meta property="og:image" content="https://example.com/cards/item.jpg">
+<meta property="og:image:secure_url" content="https://example.com/cards/item.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1255">
+<meta property="og:image:height" content="880">
+<meta property="og:image:alt" content="Short factual description of the image">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://example.com/cards/item.jpg">
+<meta name="twitter:image:alt" content="Short factual description of the image">
+```
+
+Open Graph does not require a universal 1200x630 crop. Preserve a useful original image when it renders well; publish truthful width/height metadata instead of claiming a size the file does not have. If multiple `og:image` roots are supplied, the first has precedence, and its structured properties must immediately follow it before the next root image.
+
 Do not force a social image from:
 
 - favicon files,
@@ -162,6 +190,10 @@ Do not force a social image from:
 - relative paths,
 - stale screenshots,
 - images that make the page look less trustworthy than no image.
+
+The tags must be present in the server/static HTML response. A React/Vue effect, client router, or browser-only head manager cannot repair the card for crawlers that do not execute JavaScript. For generated detail routes, render a route-specific HTML response with its own canonical URL, `og:url`, title, description, and optional image; loading JSON after hydration is still useful for the UI but is not the card source.
+
+When an image is used, verify its absolute HTTPS URL returns `200` with an actual image `Content-Type`. Add `og:image:type` and truthful width/height values when known. Avoid hotlinking protected or crawler-sensitive origins; cache the intended public preview image on the site when licensing and retention policy allow it.
 
 ## Verification Checklist
 
@@ -183,3 +215,6 @@ Before finishing:
   - `最終チェック`
 - Confirm visible time UI uses `data-nosnippet` when the time is data/news/post freshness rather than page publication.
 - Confirm deploy scripts preserve cron-managed SEO markers.
+- Fetch the final URL with `Discordbot/2.0` (and another target crawler when relevant), follow redirects, and confirm the final response is `text/html` with the expected literal head tags.
+- Fetch `og:image` separately and confirm status, MIME type, and public reachability.
+- Use `scripts/check_social_preview.py` for repeatable source/live checks; still validate the actual client when its cache behavior matters.

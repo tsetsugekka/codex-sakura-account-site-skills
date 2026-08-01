@@ -31,7 +31,7 @@ When a private page is shared, social crawlers normally have no login cookie. Do
 
 This changes only the preview metadata, not access control: the actual private content and APIs remain protected. Keep AI Hub or other explicitly excluded subsystems on their existing behavior when their metadata is managed separately.
 
-Do not add `og:image` just to fill a checklist. A missing social image is better than a tiny favicon, stale screenshot, relative path, private asset, or low-quality preview.
+Do not add `og:image` just to fill a checklist. A missing social image is better than a tiny favicon, stale screenshot, relative path, private asset, or low-quality preview. However, treat that as an intentional text-only degradation: the Open Graph basic object includes an image, so maximum cross-platform card reliability requires a real representative image.
 
 ## Workflow
 
@@ -41,6 +41,7 @@ Do not add `og:image` just to fill a checklist. A missing social image is better
    - excluded subsystem: follow the subsystem's own documented metadata rules.
 2. Inspect existing head tags, route aliases, build/deploy flow, and whether cron or server scripts write live data into the entry HTML.
 3. Add or repair the page-level SEO package:
+   - declare UTF-8 near the start of `<head>` and before executable scripts,
    - stable `<title>`,
    - `<meta name="description">`,
    - canonical URL,
@@ -52,8 +53,11 @@ Do not add `og:image` just to fill a checklist. A missing social image is better
    - favicon/touch icon if the project has them,
    - `robots` only when appropriate.
    - For private pages, use the private share-preview pattern instead of indexable fallback content.
+   - Emit all title/description/canonical/OG/Twitter tags in the initial HTML response. Social crawlers generally do not run the page JavaScript, so client-side head injection is not a fallback.
 4. Decide whether the page should have `og:image`:
    - add it only for a stable, high-quality, public, absolute URL image,
+   - when present, add its HTTPS URL, MIME type, truthful dimensions, and alt text as adjacent structured properties,
+   - explicitly mirror it in `twitter:image` and use `summary_large_image` only when the image suits that layout,
    - do not use favicon or small icon files as the fallback social image,
    - remove old relative or weak `og:image` / `twitter:image` tags when they create a worse preview than no image.
 5. Use structured data conservatively:
@@ -84,18 +88,23 @@ Do not add `og:image` just to fill a checklist. A missing social image is better
    - visible UI timestamps that may be indexed use `data-nosnippet`,
    - cron-managed markers remain intact after build/deploy preparation,
    - deploy manifests upload generated `robots.txt` and `sitemap.xml` when the project owns those files.
+   - request the final URL with both Discordbot and TelegramBot user agents and inspect the returned HTML, status, redirects, and content type; do not infer card behavior only from a normal browser,
+   - for Telegram and Discord, send the test message before judging it because the composer preview can be substantially more compact than the final card.
 
 ## Required References
 
 - Read `references/public-page-seo-patterns.md` before adding or restructuring SEO head/body fallback.
 - Read `references/time-snippet-safety.md` whenever the page has update times, post times, news times, generated-at labels, or reviewed/updated states.
 - Read `references/private-page-sharing-patterns.md` for login-only, staff-only, or otherwise protected routes that need correct social/link previews.
+- Read `references/social-preview-verification.md` whenever Discord, X, Slack, LINE, Telegram, or another link-preview client shows a blank/generic card.
 
 ## Public Page Pattern
 
 Prefer this shape for static app entry HTML:
 
 ```html
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PTS急騰株分析 - 上昇理由をAI分析</title>
 <link rel="canonical" href="https://example.com/pts/" />
 <meta name="description" content="PTSで急騰した銘柄の材料、テーマ、出来高変化を整理し、翌営業日の注目点を確認できます。">
@@ -171,3 +180,5 @@ For private routes, test an unauthenticated request through the full redirect ch
 - Do not write real timestamps into `<noscript>`, static summaries, SEO fallback, JSON-LD, or HTML comments.
 - Do not use HTML comments as daily SEO refresh stamps; use a server-side stamp file instead.
 - Do not overwrite live cron-managed SEO blocks during deploy; merge from the current live HTML first.
+- Do not treat metadata visible only after hydration as social metadata. The crawler response itself must contain the complete card.
+- Do not put analytics, import maps, app boot scripts, or blocking third-party scripts before charset and the core SEO/social metadata.
