@@ -9,7 +9,7 @@ Supported fields:
 ```text
 host: example.sakura.ne.jp
 user: example-user
-password: paste-locally-only
+password: <set-locally>
 ```
 
 Rules:

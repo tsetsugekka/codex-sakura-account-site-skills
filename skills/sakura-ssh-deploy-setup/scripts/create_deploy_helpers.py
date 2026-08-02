@@ -7,7 +7,7 @@ SECRET_TEMPLATE = """# Sakura deploy secrets
 # Fill this file locally. Never commit it.
 host: your-server.sakura.ne.jp
 user: your-account
-password: your-password
+password: <set-locally>
 """
 
 MANIFEST_TEMPLATE = """# SFTP upload manifest example.
