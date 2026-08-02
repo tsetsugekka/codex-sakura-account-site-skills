@@ -20,6 +20,7 @@ Rules:
 - Do not store mailbox passwords, GitHub tokens, or unrelated API keys in this file.
 - If SSH key authentication is preferred, store key paths outside the repository and document only the path placeholder.
 - Set the real local secret file to mode `0600` when the filesystem supports it.
+- Do not export the password value as an environment variable. A fallback AskPass executable may read this file only when OpenSSH invokes it.
 
 Validation:
 
@@ -33,3 +34,4 @@ Validation:
   - or, for projects that isolate deploy tooling, `deploy/scripts/sftp-with-local-secret.expect`
   - and `deploy/scripts/ssh-run-with-local-secret.expect`
 - Helper scripts should locate `LOCAL_DEPLOY_SECRETS.md` by walking upward from their own directory so nested helper folders still work.
+- Generated password helpers should attempt the normal interactive prompt first. AskPass is allowed only when no prompt was available and no password was submitted; a rejected submitted password must not be retried automatically.

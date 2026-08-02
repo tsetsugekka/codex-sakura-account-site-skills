@@ -25,6 +25,8 @@ Recommended remote checks:
 
 Use absolute remote paths in deploy manifests. Keep private data and logs outside `www`.
 
+Before changing SSH compatibility settings, separate informational post-quantum KEX warnings from actual authentication or algorithm-negotiation errors. Use `references/ssh-auth-troubleshooting.md`; keep host-key verification enabled.
+
 Asset cleanup rules:
 
 - Keep every asset referenced by the current live `index.html`.

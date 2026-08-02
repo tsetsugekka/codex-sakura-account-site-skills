@@ -32,7 +32,7 @@
 `sakura-ssh-deploy-setup`
 
 - **困りごと:** Sakura Server へサイトをアップロードしたいが、毎回パスワード入力や手作業の SFTP をしたくない。
-- **Codex がすること:** Sakura の接続情報をローカル秘密ファイルに保存し、SSH/SFTP helper、アップロード許可リスト、`.gitignore`、確認手順を作る。
+- **Codex がすること:** Sakura の接続情報をローカル秘密ファイルに保存し、通常の対話認証を優先して必要時だけ AskPass へ一度フォールバックする SSH/SFTP helper、アップロード許可リスト、`.gitignore`、確認手順を作る。接続失敗時は PQ 警告、鍵交換、ユーザー認証、転送を切り分ける。
 - **できあがる状態:** Codex が以後のデプロイで、許可されたファイルだけを Sakura にアップロードできる。秘密情報は Git に入らない。
 
 ### 2. Sakura メール送信元の準備
@@ -112,6 +112,9 @@ GitHub 新規リポジトリ作成、初回 commit/push、以後の intended bra
 
 - **許可リスト型のデプロイ**
   リポジトリ全体や `dist` 全体を再帰アップロードせず、SFTP manifest に書いたファイルだけを配布します。
+
+- **SSH 認証を段階的に診断**
+  post-quantum KEX の警告をパスワード失敗や `ssh-rsa` 互換性問題と混同せず、接続段階を確認します。通常の password prompt を最初に使い、制限環境で prompt が取得できず、まだ password を送信していない場合だけ、ローカル秘密ファイルを読む AskPass で一度再試行します。host key verification は無効化しません。
 
 - **cron/crawler を安全運用**
   既存の cron wrapper、Python/JS crawler、README/SPEC/CHANGELOG を先に読み、現在の live data 契約を壊さない形で整えます。同一 host への連続アクセスにはランダム sleep を入れ、cache-first、batch 上限、timeout、retry 上限、lock/stamp、atomic write、last-good 保護を入れます。通知は failure-only にし、成功・lock skip・no-op・予定された defer ではメールしません。

@@ -84,21 +84,75 @@ if {$host eq "" || $user eq "" || $password eq ""} {
 }
 '''
 
+ASKPASS_SCRIPT = r'''#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+search_dir=$script_dir
+secret_path=""
+attempt=0
+while [ "$attempt" -lt 6 ]; do
+  if [ -r "$search_dir/LOCAL_DEPLOY_SECRETS.md" ]; then
+    secret_path="$search_dir/LOCAL_DEPLOY_SECRETS.md"
+    break
+  fi
+  parent=$(dirname -- "$search_dir")
+  [ "$parent" = "$search_dir" ] && break
+  search_dir=$parent
+  attempt=$((attempt + 1))
+done
+
+if [ -z "$secret_path" ]; then
+  echo "Missing readable LOCAL_DEPLOY_SECRETS.md" >&2
+  exit 1
+fi
+
+password=$(sed -n 's/^[[:space:]]*[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd][[:space:]]*[:=：][[:space:]]*//p' "$secret_path" | tail -n 1)
+if [ -z "$password" ]; then
+  echo "Missing password in LOCAL_DEPLOY_SECRETS.md" >&2
+  exit 1
+fi
+printf '%s\n' "$password"
+'''
+
 SFTP_SCRIPT = EXPECT_COMMON + r'''
 if {[llength $argv] < 1} {
   puts "Usage: expect scripts/sftp-with-local-secret.expect <batch-file>"
   exit 2
 }
 set batch_path [lindex $argv 0]
-spawn sftp -oBatchMode=no -b $batch_path "$user@$host"
+set password_sent 0
+set prompt_unavailable 0
+spawn sftp -oBatchMode=no -oNumberOfPasswordPrompts=1 -b $batch_path "$user@$host"
 expect {
   -re "(?i)password:" {
+    set password_sent 1
     send -- "$password\r"
+    exp_continue
+  }
+  -re "(?i)permission denied" {
+    if {!$password_sent} {
+      set prompt_unavailable 1
+    }
     exp_continue
   }
   eof
 }
 catch wait result
+if {[lindex $result 3] != 0 && $prompt_unavailable} {
+  set askpass_path [file join $script_dir "askpass-with-local-secret.sh"]
+  if {![file executable $askpass_path]} {
+    puts "Missing executable AskPass fallback: $askpass_path"
+    exit 2
+  }
+  puts "Interactive password prompt unavailable; retrying once with local AskPass."
+  set env(SSH_ASKPASS) $askpass_path
+  set env(SSH_ASKPASS_REQUIRE) force
+  set env(DISPLAY) codex-local-deploy
+  spawn sftp -oBatchMode=no -oNumberOfPasswordPrompts=1 -b $batch_path "$user@$host"
+  expect eof
+  catch wait result
+}
 exit [lindex $result 3]
 '''
 
@@ -107,15 +161,38 @@ if {[llength $argv] < 1} {
   puts "Usage: expect scripts/ssh-run-with-local-secret.expect <remote command...>"
   exit 2
 }
-spawn ssh -oBatchMode=no "$user@$host" {*}$argv
+set password_sent 0
+set prompt_unavailable 0
+spawn ssh -oBatchMode=no -oNumberOfPasswordPrompts=1 "$user@$host" {*}$argv
 expect {
   -re "(?i)password:" {
+    set password_sent 1
     send -- "$password\r"
+    exp_continue
+  }
+  -re "(?i)permission denied" {
+    if {!$password_sent} {
+      set prompt_unavailable 1
+    }
     exp_continue
   }
   eof
 }
 catch wait result
+if {[lindex $result 3] != 0 && $prompt_unavailable} {
+  set askpass_path [file join $script_dir "askpass-with-local-secret.sh"]
+  if {![file executable $askpass_path]} {
+    puts "Missing executable AskPass fallback: $askpass_path"
+    exit 2
+  }
+  puts "Interactive password prompt unavailable; retrying once with local AskPass."
+  set env(SSH_ASKPASS) $askpass_path
+  set env(SSH_ASKPASS_REQUIRE) force
+  set env(DISPLAY) codex-local-deploy
+  spawn ssh -oBatchMode=no -oNumberOfPasswordPrompts=1 "$user@$host" {*}$argv
+  expect eof
+  catch wait result
+}
 exit [lindex $result 3]
 '''
 
@@ -183,6 +260,7 @@ def main() -> None:
     write_file(root / "LOCAL_DEPLOY_SECRETS.example.md", SECRET_TEMPLATE)
     ensure_gitignore(root)
     write_file(deploy_dir / "SFTP_UPLOAD.example.txt", MANIFEST_TEMPLATE)
+    write_file(helper_dir / "askpass-with-local-secret.sh", ASKPASS_SCRIPT, executable=True)
     write_file(helper_dir / "sftp-with-local-secret.expect", SFTP_SCRIPT, executable=True)
     write_file(helper_dir / "ssh-run-with-local-secret.expect", SSH_SCRIPT, executable=True)
     if args.write_local_secret:
