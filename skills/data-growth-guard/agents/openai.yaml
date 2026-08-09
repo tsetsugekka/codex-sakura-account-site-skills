@@ -1,0 +1,4 @@
+interface:
+  display_name: "Data Growth Guard"
+  short_description: "サーバーデータの無制限増加を監査し、安全な保存構造を設計"
+  default_prompt: "$data-growth-guard を使って、サーバー上の無制限に増え続けるデータファイルを監査し、適切な分割・スナップショット・監視設計を提案してください。"

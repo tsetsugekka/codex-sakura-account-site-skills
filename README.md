@@ -1,6 +1,6 @@
 # Sakura Account Site Skills
 
-> Sakura Server 上に、SSH 配布・メール送信元・認証付き Web サイト・API 秘密情報・cron/crawler 運用・公開ページ SEO を安全に整えるための Codex Skill Suite。
+> Sakura Server 上に、SSH 配布・メール送信元・認証付き Web サイト・API 秘密情報・cron/crawler 運用・データ増加監視・公開ページ SEO を安全に整えるための Codex Skill Suite。
 
 ![Skill Suite](https://img.shields.io/badge/Codex-Skill%20Suite-4f46e5)
 ![Sakura Server](https://img.shields.io/badge/Sakura%20Server-ready-22c55e)
@@ -22,10 +22,11 @@
 | `sakura-auth-site-setup` | 登録、メール確認、パスワード回復、session、role/page/API 権限 |
 | `sakura-api-secrets-deploy` | API key の private store、runtime resolver、API gate、CSRF、SSRF、防漏洩 deploy |
 | `cron-crawler-safety` | crawler の throttle、lock、atomic write、failure-only alert |
+| `data-growth-guard` | 無制限に増えるファイルの監査、守衛構築、公開/非公開データ・分割・snapshot 設計 |
 | `static-deploy-refresh-check` | stale asset 回避、live data 保護、旧 hash asset cleanup |
 | `public-page-seo-assist` | 公開 SPA/静的ページの metadata、noscript、SEO marker |
 
-主なゴールは次の 7 つです。どの skill を使うかは、「今なにを作りたいか」で選びます。
+主なゴールは次の 8 つです。どの skill を使うかは、「今なにを作りたいか」で選びます。
 
 ### 1. Sakura への自動デプロイ準備
 
@@ -83,6 +84,14 @@
 - **Codex がすること:** 公開ページだけを対象に、title、description、canonical、OGP、Twitter Card、WebSite/WebApplication JSON-LD、`h1`、`noscript` fallback、cron 管理 marker を整える。データ更新時刻やニュース時刻は `data-nosnippet` で Google snippet に拾わせない。
 - **できあがる状態:** JS が動く前でもページ内容が検索エンジンに伝わり、共有カードも安定する。ユーザーには更新時刻を見せつつ、検索結果には古い「ページ公開日」のように見える時刻を出しにくくする。
 
+### 8. データ無制限増加の監査と保存構造の設計
+
+`data-growth-guard`
+
+- **困りごと:** JSON、履歴、feed、cache、export が大きくなり続けているが、単に大きいだけか、rolling window か、上限なく蓄積しているのか分からない。公開データと private state が混ざり、frontend が履歴 shard を大量に読む構造も整理したい。
+- **Codex がすること:** 1 回の size では断定せず、複数回の観測で「最古レコードが固定されたまま byte が増え続ける」ファイルを特定し、実測増加率と保持期間到達時の推定 size を報告する。private state、lock、Markdown report、cron 例を持つ guard を dry-run-first で生成し、公開/非公開境界、日/月 shard、index、consumer 別の有界 snapshot、detail の正確な shard 読み、atomic write、retention、2 段階 migration の guidebook を提供する。
+- **できあがる状態:** 大きいが有界な rolling file を誤報せず、無制限 accumulator を継続監視できる。frontend の一覧は小さな snapshot、detail と履歴は authoritative shard を読む、復旧可能で上限の明確な data architecture になる。
+
 ## 推奨 companion skill
 
 GitHub 新規リポジトリ作成、初回 commit/push、以後の intended branch 公開運用も Codex に任せたい場合は、別配布の companion skill `github-repo-publish-setup` を併用します。配布リポジトリ名は `codex-github-publish-workflow-skill` です。
@@ -119,6 +128,12 @@ GitHub 新規リポジトリ作成、初回 commit/push、以後の intended bra
 - **cron/crawler を安全運用**
   既存の cron wrapper、Python/JS crawler、README/SPEC/CHANGELOG を先に読み、現在の live data 契約を壊さない形で整えます。同一 host への連続アクセスにはランダム sleep を入れ、cache-first、batch 上限、timeout、retry 上限、lock/stamp、atomic write、last-good 保護を入れます。通知は failure-only にし、成功・lock skip・no-op・予定された defer ではメールしません。
 
+- **file size ではなく growth shape を監視**
+  `data-growth-guard` は、最古レコードの移動と実測 byte 増加を run 間で比較します。最古日が前進する rolling window、size が安定する working set、`YYYY-MM.json` / `YYYY-MM-DD.json` の期間 shard は無制限 accumulator と区別します。観測 state と report は web root 外に置き、finding は通知しても本体 job を止めません。
+
+- **archive・index・snapshot の役割を分離**
+  長期履歴は access pattern に合う期間 shard を authority とし、stable ID/date index で正確に位置決めします。list/home/widget は用途ごとに bounded snapshot を持ち、detail は必要な account/category/date shard だけを読みます。raw acquisition cache、cursor、failure state、lock、log、backup は公開しません。
+
 - **公開後の古いスタイル対策**
   新しいページやスタイルを公開した後、ユーザーに手動リロードを求めず、ページ側で同一オリジンの JS/CSS 参照変更を検出して一度だけ更新します。更新用の `__deploy_v` は `history.replaceState` で表示 URL から消し、Sakura 上の古い hash assets は「現在 + 直前」の世代だけ残し、cron 生成データやサーバー注入 HTML は保護します。
 
@@ -152,6 +167,7 @@ skills/
   sakura-auth-site-setup/
   sakura-api-secrets-deploy/
   cron-crawler-safety/
+  data-growth-guard/
   static-deploy-refresh-check/
   public-page-seo-assist/
 ```
@@ -181,6 +197,10 @@ cron で動く crawler を、二重起動防止、timeout、atomic write、last-
 ```
 
 ```text
+このサーバーの JSON・履歴・cache を監査し、rolling window と無制限 accumulator を区別した report を作り、private state と weekly cron を持つ守衛を整えるため、$data-growth-guard を使ってください。公開/非公開境界、期間 shard、index、consumer 別 snapshot、detail 読み取りもあわせて設計してください。
+```
+
+```text
 既存の静的ページへ一度だけ動くデプロイ更新チェックを追加し、新規ページにも同じ挙動を入れるため、$static-deploy-refresh-check を使ってください。
 ```
 
@@ -200,6 +220,7 @@ cron で動く crawler を、二重起動防止、timeout、atomic write、last-
 - サイト名、公開 URL、送信元メール、送信元名、envelope sender はサーバー側の私密設定に置き、管理画面で編集させない。
 - 管理画面で編集できるメール項目は、原則として cron 失敗通知の受信先だけにする。
 - ユーザー DB、設定ファイル、cron ログは Web 公開ディレクトリの外に置く。
+- data growth の観測 state、report、lock、notification hook は Web 公開ディレクトリの外に置く。1 回の size や date span だけで無制限増加と断定せず、十分に古い baseline と最古レコードの移動を比較する。
 - 登録確認 token は平文保存せず、hash と有効期限だけを保存する。
 - パスワード再設定 token も hash・目的・有効期限・単回使用で扱い、再設定成功後は既存 session を失効する。確認再送と再設定依頼は account enumeration を避ける応答と cooldown を持つ。
 - 認証系の token lifecycle、role transition、session、CSRF は `sakura-auth-site-setup` が担当し、mailbox skill は token を生成・保存・検証・記録しない。
