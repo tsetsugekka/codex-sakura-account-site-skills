@@ -22,18 +22,19 @@ Pages without a suitable image should use `twitter:card=summary` and omit `og:im
 
 For a real preview image:
 
-- use an absolute public HTTPS URL;
+- use an absolute public HTTPS URL controlled by the site;
+- do not declare a third-party hotlink as the card image; cache or mirror an external source only when usage rights and retention policy allow it, otherwise use a suitable site-owned image or omit the image card;
 - require `200` without cookies or referer;
 - require a real image MIME type;
 - keep the image stable for the page's retention period;
 - add `og:image:secure_url`, `og:image:type`, truthful `og:image:width`/`og:image:height`, and `og:image:alt`;
 - place those structured properties directly after the corresponding `og:image` root;
-- explicitly add `twitter:image` and `twitter:image:alt` for predictable X cards;
+- explicitly add `twitter:image` and `twitter:image:alt` for predictable X cards; they may reuse the Open Graph image or use a content-equivalent platform-specific image;
 - use `summary_large_image` only when the image is appropriate for a large card.
 
 There is no universal Open Graph crop requirement. Do not invent `1200x630` dimensions for an uncropped source file. A representative original image with correct dimensions is valid; crop only when the product intentionally needs a consistent card composition.
 
-If an upstream image host blocks crawlers or hotlinks, cache the one approved preview image on the same public site. Do not claim that changing URL query parameters will force every platform to refetch; many clients cache by normalized URL or retain failed previews.
+Do not make a page's primary preview depend on another site's retention, access controls, crawler policy, or content changes. Cache the approved preview image on the same public site when usage rights and retention policy allow it. Do not claim that changing URL query parameters will force every platform to refetch; many clients cache by normalized URL or retain failed previews.
 
 ## Dynamic Detail Routes
 

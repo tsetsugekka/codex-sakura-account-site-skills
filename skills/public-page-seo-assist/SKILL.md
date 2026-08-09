@@ -11,12 +11,13 @@ Improve SEO for public pages and social link previews for private pages without 
 
 Use this skill for both publicly indexable pages and private pages whose links are shared in chat or social applications. For login-only, staff-only, or private pages, do not add indexable SEO fallback content; use `noindex` and the project's access-control pattern while still providing safe, page-specific sharing metadata.
 
-This skill should align four public signals before considering the work complete:
+This skill should align the page-identity signals before considering the work complete:
 
 - page `<head>` canonical URL,
 - Open Graph `og:url`,
-- `sitemap.xml` `<loc>`,
 - the actual final public URL after redirects, trailing-slash handling, and extensionless aliases.
+
+When the page is intentionally listed in a sitemap, its `sitemap.xml` `<loc>` must use that same final URL. A public, indexable page does not have to appear in every sitemap; sitemap inclusion is a discovery policy, not an indexability requirement.
 
 For private pages, replace the sitemap/indexability signal with a protected share-preview signal:
 
@@ -55,11 +56,14 @@ Do not add `og:image` just to fill a checklist. A missing social image is better
    - For private pages, use the private share-preview pattern instead of indexable fallback content.
    - Emit all title/description/canonical/OG/Twitter tags in the initial HTML response. Social crawlers generally do not run the page JavaScript, so client-side head injection is not a fallback.
 4. Decide whether the page should have `og:image`:
-   - add it only for a stable, high-quality, public, absolute URL image,
+   - add it only for a stable, high-quality, public, absolute HTTPS image,
+   - serve the declared social-preview image from a URL controlled by the site; do not make the card depend on a third-party hotlink,
+   - when the source image belongs to another origin, cache or mirror it only when usage rights and the site's retention policy allow it; otherwise use a suitable site-owned image or publish a text-only card,
    - when present, add its HTTPS URL, MIME type, truthful dimensions, and alt text as adjacent structured properties,
-   - explicitly mirror it in `twitter:image` and use `summary_large_image` only when the image suits that layout,
+   - configure `twitter:image` explicitly when an X card is required; it may reuse `og:image` or use a content-equivalent platform-specific image,
+   - use `summary_large_image` only when the selected Twitter image suits that layout,
    - do not use favicon or small icon files as the fallback social image,
-   - remove old relative or weak `og:image` / `twitter:image` tags when they create a worse preview than no image.
+   - remove old relative, unauthorized, unstable, or weak `og:image` / `twitter:image` tags when they create a worse preview than no image.
 5. Use structured data conservatively:
    - `WebSite` for the site top page,
    - `WebApplication` for interactive tools,
@@ -69,11 +73,13 @@ Do not add `og:image` just to fill a checklist. A missing social image is better
    - one real or screen-reader-only `<h1>`,
    - a concise static summary near the app root when useful,
    - a `<noscript>` fallback that explains the page and major entities/search intents.
+   - when route-specific body content is emitted in the initial response, load its production styles before displaying it and let hydration enhance the same structure rather than briefly exposing raw SEO text or duplicate layouts.
 7. If cron/server scripts update SEO fallback content, add stable marker comments around only that managed region and document ownership in the updater.
 8. If the page displays data update times, news times, X/SNS post times, generated-at times, or reviewed/updated labels, apply the time-snippet rules in `references/time-snippet-safety.md`.
 9. Repair sitemap coverage:
-   - include every public indexable route that should be discoverable,
-   - make each `<loc>` match the canonical URL and `og:url`,
+   - include the public routes that the site's discovery policy chooses to advertise,
+   - do not infer that every indexable route must be listed,
+   - for each listed route, make `<loc>` match the canonical URL and `og:url`,
    - use the final route form, such as trailing slash for directory pages and extensionless URL when that is the public route,
    - generate `sitemap.xml` during deploy when daily data pages need fresh `<lastmod>`,
    - when cron jobs successfully write public page data, refresh `sitemap.xml`, `robots.txt`, or the project's equivalent SEO index from the same server-side generator so `<lastmod>` follows data updates rather than only manual deploys,
@@ -81,10 +87,10 @@ Do not add `og:image` just to fill a checklist. A missing social image is better
 10. If the entry HTML is deployed statically and also has cron-managed HTML regions, combine this skill with `static-deploy-refresh-check` so live `<noscript>` regions are fetched and merged before publishing.
 11. Verify:
    - built HTML contains one title, one canonical when applicable, and expected meta cards,
-   - canonical, `og:url`, and sitemap `<loc>` match the final public URL,
+   - canonical and `og:url` match the final public URL; sitemap `<loc>` matches too when the route is listed,
    - `og:image` is absent unless a real preview image passes the quality/stability check,
    - JSON-LD parses as valid JSON and has no article date fields unless intentionally article-like,
-   - `<noscript>` contains useful public text but no real timestamps,
+   - `<noscript>` contains useful public text but no misleading freshness timestamps; genuine dated article pages follow the article-time exception in `references/time-snippet-safety.md`,
    - visible UI timestamps that may be indexed use `data-nosnippet`,
    - cron-managed markers remain intact after build/deploy preparation,
    - deploy manifests upload generated `robots.txt` and `sitemap.xml` when the project owns those files.
@@ -166,7 +172,7 @@ Rules:
 - Make fallback content consistent with what users can see in the live UI.
 - Do not add hidden keyword stuffing.
 - Do not put private, paid, draft, or login-only details into `noscript`.
-- Do not put real dates or times in static SEO fallback.
+- For dashboards, tools, aggregate feeds, rankings, and other continuously updated application pages, do not put volatile data-freshness timestamps in static SEO fallback. A genuine dated article or news-detail route may expose its truthful primary publication time.
 
 ## Private Page Sharing Verification
 
@@ -177,7 +183,7 @@ For private routes, test an unauthenticated request through the full redirect ch
 - Do not make a private page indexable.
 - Do not add article structured data to tools, dashboards, feeds, or admin pages.
 - Do not use `<time datetime>`, `datePublished`, or `dateModified` for volatile data unless the page is truly an article page.
-- Do not write real timestamps into `<noscript>`, static summaries, SEO fallback, JSON-LD, or HTML comments.
+- Do not write volatile data-freshness timestamps into non-article `<noscript>`, static summaries, SEO fallback, JSON-LD, or HTML comments. This does not prohibit truthful publication metadata on a genuine dated article or news-detail route.
 - Do not use HTML comments as daily SEO refresh stamps; use a server-side stamp file instead.
 - Do not overwrite live cron-managed SEO blocks during deploy; merge from the current live HTML first.
 - Do not treat metadata visible only after hydration as social metadata. The crawler response itself must contain the complete card.

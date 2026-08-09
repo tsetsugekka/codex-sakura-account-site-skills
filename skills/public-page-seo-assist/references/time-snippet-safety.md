@@ -4,16 +4,16 @@ Use this reference whenever a public page displays data update times, post times
 
 ## Principle
 
-A page may show data time to users, but Google snippets should not read those times as the page's publication date.
+A page may show data time to users, but Google snippets should not read those times as the page's publication date unless the route is intentionally a dated article or news detail and the timestamp truthfully describes that content.
 
-Handle this in two layers:
+For dashboards, tools, aggregate feeds, rankings, and continuously updated application pages, handle this in two layers:
 
-1. Static SEO and `noscript` must not contain real dates or times.
+1. Static SEO and `noscript` must not contain volatile data-freshness dates or times.
 2. Visible UI timestamps must use `data-nosnippet`.
 
-## Static SEO Must Not Include Real Time
+## Non-Article Static SEO Must Not Include Real Time
 
-Do not write real timestamps into:
+For non-article application pages, do not write real timestamps into:
 
 - `<noscript>`,
 - static summaries,
@@ -39,7 +39,7 @@ If a cron job needs daily refresh throttling, use a server-side stamp file, for 
 
 ## Visible UI Time Uses Data Nosnippet
 
-Users can still see timestamps. Wrap them with `data-nosnippet`:
+Users can still see volatile timestamps. Wrap them with `data-nosnippet`:
 
 ```html
 <span data-nosnippet>更新日時: 2026/07/07 12:00</span>
@@ -61,6 +61,8 @@ Apply this to:
 - generated-at time,
 - reviewed/updated/final-check status time,
 - any small timestamp in ranking cards, comments, news lists, or feed items.
+
+Do not apply this mechanically to the primary publication time of a genuine article or news-detail route when that time is intentionally part of the searchable content.
 
 If a parent row is entirely timestamp/status metadata, `data-nosnippet` can be placed on the parent element.
 
@@ -85,7 +87,7 @@ Use it carefully:
 - daily-updated public data pages can generate today's deploy date as `<lastmod>`,
 - static tools and non-news pages should use source/content mtime or a conservative update date,
 - avoid committing hardcoded daily `<lastmod>` values that will become stale,
-- keep real dates out of `noscript`, static SEO body text, JSON-LD, and HTML comments even when sitemap uses `<lastmod>`.
+- keep volatile data-freshness dates out of non-article `noscript`, static SEO body text, JSON-LD, and HTML comments even when sitemap uses `<lastmod>`.
 
 ## Use Relative Batches In SEO Text
 
@@ -116,7 +118,7 @@ Then classify each match:
 
 ## Completion Checklist
 
-- No real dates/times in `noscript` or static SEO fallback.
+- No misleading freshness dates/times in non-article `noscript` or static SEO fallback.
 - No HTML date-stamp comments for SEO refresh throttling.
 - All visible data/news/post/generated/reviewed timestamps use `data-nosnippet`.
 - No `datePublished` or `dateModified` unless the page is a true article.

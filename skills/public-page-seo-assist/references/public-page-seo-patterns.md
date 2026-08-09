@@ -31,12 +31,13 @@ Put charset, viewport, title, description, canonical, Open Graph, and Twitter me
 
 ## URL Signal Consistency
 
-For public indexable pages, these signals should point to the same final URL:
+For public indexable pages, the canonical and Open Graph identity signals should point to the same final URL:
 
 - `<link rel="canonical" href="...">`
 - `<meta property="og:url" content="...">`
-- `sitemap.xml` `<loc>`
 - the final public route after redirects and route normalization
+
+If the route is included in a sitemap, its `sitemap.xml` `<loc>` must use the same final URL. Sitemap inclusion is optional discovery policy; it is not what makes an otherwise crawlable page indexable.
 
 Use the route that users and crawlers should keep:
 
@@ -50,7 +51,8 @@ When fixing many pages, add a small verification script that reads source and bu
 
 If the project owns `sitemap.xml`, keep it complete and generated from the deploy/build source of truth:
 
-- include every public indexable page that should be discoverable,
+- include the public indexable pages that the site's discovery policy intends search engines to discover through that sitemap,
+- do not assume every indexable route must be listed, especially for large archives or permanent detail collections,
 - exclude login-only, staff-only, private, draft, or `noindex` pages,
 - make `<loc>` match canonical and `og:url`,
 - use deploy-time `<lastmod>` for pages whose public data refreshes daily,
@@ -86,6 +88,8 @@ JavaScript-heavy apps often start with an empty root. Add enough static body con
 - a `noscript` fallback with the page purpose, important domains/entities, and natural search intents.
 
 For app pages with visible UI, prefer a screen-reader-only summary over large duplicate intro text if the visible product surface should stay dense.
+
+When the initial response contains route-specific visible content, include the production stylesheet early enough that users do not see an unstyled SEO document before the application hydrates. Prefer hydrating or enhancing the same semantic structure over replacing it with a second, visually different copy.
 
 ## Noscript Static SEO
 
@@ -182,6 +186,10 @@ For an image card, use this order so each structured image property is associate
 
 Open Graph does not require a universal 1200x630 crop. Preserve a useful original image when it renders well; publish truthful width/height metadata instead of claiming a size the file does not have. If multiple `og:image` roots are supplied, the first has precedence, and its structured properties must immediately follow it before the next root image.
 
+Serve declared preview images from URLs controlled by the site. Directly hotlinking an image from another site leaves the card dependent on that site's retention, access controls, crawler policy, and content changes. Cache or mirror an external source image only when usage rights and the site's retention policy permit it; otherwise use a suitable site-owned image or omit the image card.
+
+`og:image` and `twitter:image` do not have to be identical. Reuse one image when it works well across platforms, or provide content-equivalent platform-specific variants when their layouts differ. In either case, keep every declared image truthful, stable, public, and representative of the same page.
+
 Do not force a social image from:
 
 - favicon files,
@@ -193,7 +201,7 @@ Do not force a social image from:
 
 The tags must be present in the server/static HTML response. A React/Vue effect, client router, or browser-only head manager cannot repair the card for crawlers that do not execute JavaScript. For generated detail routes, render a route-specific HTML response with its own canonical URL, `og:url`, title, description, and optional image; loading JSON after hydration is still useful for the UI but is not the card source.
 
-When an image is used, verify its absolute HTTPS URL returns `200` with an actual image `Content-Type`. Add `og:image:type` and truthful width/height values when known. Avoid hotlinking protected or crawler-sensitive origins; cache the intended public preview image on the site when licensing and retention policy allow it.
+When an image is used, verify its site-controlled absolute HTTPS URL returns `200` with an actual image `Content-Type`. Add `og:image:type` and truthful width/height values when known. Do not declare a protected, unstable, or crawler-sensitive third-party URL as the preview image; cache the intended public image on the site when usage rights and retention policy allow it.
 
 ## Verification Checklist
 
@@ -201,7 +209,7 @@ Before finishing:
 
 - Inspect source and built HTML.
 - Confirm no duplicate `<title>`, canonical, or conflicting robots tags.
-- Confirm canonical, `og:url`, sitemap `<loc>`, and final public URL match.
+- Confirm canonical, `og:url`, and final public URL match; confirm sitemap `<loc>` too when the route is listed.
 - Confirm public sitemap coverage includes the intended indexable pages and excludes private/noindex pages.
 - Confirm `og:image` is absent unless a real stable preview image passes the sharing-card checks.
 - Validate JSON-LD as JSON.
