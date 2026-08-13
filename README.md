@@ -20,7 +20,7 @@
 | `sakura-ssh-deploy-setup` | local-only secret と SFTP allowlist による安全な SSH 配布 |
 | `sakura-mailbox-setup` | Sakura mailbox、DNS、sender、PHP/sendmail、配信確認 |
 | `sakura-auth-site-setup` | 登録、メール確認、パスワード回復、session、role/page/API 権限 |
-| `sakura-api-secrets-deploy` | API key の private store、runtime resolver、API gate、CSRF、SSRF、防漏洩 deploy |
+| `sakura-api-secrets-deploy` | API credential/model 設定の private store、明示的 source policy、atomic migration、API gate、CSRF、SSRF、防漏洩 deploy |
 | `cron-crawler-safety` | crawler の throttle、lock、atomic write、failure-only alert |
 | `data-growth-guard` | 無制限に増えるファイルの監査、守衛構築、公開/非公開データ・分割・snapshot 設計 |
 | `static-deploy-refresh-check` | stale asset 回避、live data 保護、旧 hash asset cleanup |
@@ -52,13 +52,13 @@
 - **Codex がすること:** private user store、password hash、CSRF、session 失効、確認/再設定 token の hash・期限・単回使用、ロール別ページ権限、保護 API、管理画面を組み込む。実メールボックスと配信基盤は `sakura-mailbox-setup` と組み合わせる。
 - **できあがる状態:** 登録・メール確認・パスワード回復・ユーザーグループ・保護ページ/API・管理画面を持つアカウント制サイトになる。
 
-### 4. API と環境変数の安全な配備
+### 4. API 秘密情報と実行設定の安全な配備
 
 `sakura-api-secrets-deploy`
 
-- **困りごと:** 外部 API key を Sakura の PHP、Python、cron から共通利用したいが、`.env` の公開、鍵ファイルの分散、無認証 proxy、CSRF、SSRF、配布 manifest への混入が怖い。
-- **Codex がすること:** web root 外の単一 private store、canonical 変数名、PHP/Python/shell 共通 resolver、ページ権限と CSRF、bearer API の分離、include-only/CLI-only 制御、URL fetch の SSRF 防御、段階的 migration と低頻度検証を整える。
-- **できあがる状態:** 秘密値をブラウザや Git に出さず、全 business API が用途に合う門番を持ち、SFTP allowlist で安全に配備・検証できる。
+- **困りごと:** 外部 API credential と model 設定を Sakura の PHP、Python、cron から共通利用したいが、process environment と private file の優先順位が曖昧、`.env` の公開、設定重複、鍵ファイルの分散、書き換え途中の破損、無認証 proxy、CSRF、SSRF、配布 manifest への混入が怖い。
+- **Codex がすること:** web root 外の application 単位 private store、canonical configuration key、`managed-file-only` または `injection-first` の明示的 source policy、PHP/Python/shell 共通 resolver、同時 read と atomic replace、非対称 private key の分離、API gate、CSRF、SSRF 防御、段階的 migration と低頻度検証を整える。
+- **できあがる状態:** 秘密値を browser や Git に出さず、複数 runtime が同じ完全な設定を安全に読み、旧 key file や shell export を検証後に除去し、SFTP allowlist で安全に配備できる。
 
 ### 5. cron・crawler の安全運用
 
@@ -146,8 +146,8 @@ GitHub 新規リポジトリ作成、初回 commit/push、以後の intended bra
 - **ページ権限の引き継ぎを明確化**
   ロールごとのページ権限はアカウントシステムが保持し、保護ページの PHP 入口が `window.SITE_AUTH.pagePermission` のような実行時値を注入します。ページ側はロール名ではなく、そのページ用の permission key を見ます。
 
-- **API key と business API の境界を統一**
-  API key は web root 外の単一 private store に置き、PHP・Python・cron で同じ canonical name と解決順序を使います。browser API は server-side login・page permission・CSRF、bearer API は token scope、共通 PHP は direct `404`、worker は HTTP `404` に分けます。status UI は値、private path、raw upstream body を返しません。
+- **API credential・model 設定と business API の境界を統一**
+  API credential と model/runtime 設定は web root 外の application 単位 private store に置き、PHP・Python・cron で同じ canonical key と明示した source policy を使います。managed-file-only では同名 process environment を無視し、injection-first は明示的に選んだ場合だけ使います。同時 read は許可し、更新は同一 directory の `0600` temporary file から atomic rename します。非対称 private key 本文は別の `0600` PEM に置きます。browser API は server-side login・permission・CSRF、bearer API は token scope、共通 PHP は direct `404`、worker は HTTP `404` に分けます。
 
 - **認証ロジックとメール基盤を分離して連携**
   `sakura-auth-site-setup` は確認/再設定 token、account state、session、CSRF、role permission を担当し、`sakura-mailbox-setup` は Sakura mailbox、DNS、From/envelope sender、sendmail/PHP mail、delivery verification を担当します。どちらか一方だけで登録メール認証完了とは扱いません。
@@ -189,7 +189,7 @@ skills/
 ```
 
 ```text
-この Sakura サイトの PHP・Python・cron で使う API key を web root 外へ統合し、すべての business API に認証・ページ権限・CSRF と SSRF 防御を入れて安全に配備するため、$sakura-api-secrets-deploy を使ってください。
+この Sakura サイトの PHP・Python・cron で使う API credential と model 設定を web root 外へ統合し、managed-file-only policy、atomic update、非対称 private key の分離、business API の認証・CSRF・SSRF 防御を整えて安全に配備するため、$sakura-api-secrets-deploy を使ってください。
 ```
 
 ```text
@@ -224,7 +224,10 @@ cron で動く crawler を、二重起動防止、timeout、atomic write、last-
 - 登録確認 token は平文保存せず、hash と有効期限だけを保存する。
 - パスワード再設定 token も hash・目的・有効期限・単回使用で扱い、再設定成功後は既存 session を失効する。確認再送と再設定依頼は account enumeration を避ける応答と cooldown を持つ。
 - 認証系の token lifecycle、role transition、session、CSRF は `sakura-auth-site-setup` が担当し、mailbox skill は token を生成・保存・検証・記録しない。
-- API credential は web root 外の単一 private store に置き、directory `0700`・file `0600`、process environment 優先、managed private config fallback、未設定は明示、という共通契約で読む。
+- API credential と model/runtime 設定は web root 外の application 単位 private store に置き、directory は正確に `0700`、file は正確に `0600` とする。source policy は managed-file-only または injection-first を明示し、全 runtime で統一する。managed-file-only では同名 environment と path override を読まない。
+- 同じ private store は複数 program が同時 read してよい。更新は同じ private directory に完全な `0600` temporary file を作り、重複と必須項目を検証して atomic rename する。live file を in-place truncate/append しない。
+- 非対称署名 API の private key 本文は別の `0700` directory / `0600` PEM に置き、共通 store には app/client ID、allowlisted signing algorithm、private-key path だけを保存する。
+- migration 後は全 runtime を検証してから旧 provider 別 key file と shell profile/cron export を削除し、temporary incoming file を残さない。
 - browser-facing business API はページ入口とは別に server-side login と page permission を検証し、cookie 認証の mutation・quota call・job control は CSRF を必須にする。
 - user-controlled URL fetch は public HTTP(S) の必要 port だけを許可し、A/AAAA、private/loopback/link-local/reserved address、DNS pinning、redirect 各 hop、size/timeout を検証する。
 - crawler は公開 API、feed、sitemap、またはアクセス許可されたページを優先する。認証が必要な場合は、権限のある公式 API、正規ログイン、ユーザー承認済み session、ブラウザ操作、または手動 export を使う。paywall、CAPTCHA、login、bot 防御、rate limit に遭遇した場合、Codex は独断で回避しない。まず開発を止めてユーザーと十分に相談し、ユーザーにアクセス権、目的、リスク、許容できる方法を論証してもらってから次の進め方を決める。source 側の制限に対しては、cache、slot、batch 上限、per-host throttle、random sleep、retry 上限で運用する。

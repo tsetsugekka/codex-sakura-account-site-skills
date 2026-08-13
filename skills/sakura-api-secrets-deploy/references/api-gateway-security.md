@@ -14,6 +14,8 @@ For cookie-authenticated business endpoints, use this order:
 
 This ordering prevents unauthenticated callers from using validation differences to enumerate jobs, configuration, or private records.
 
+For cookie-authenticated POST requests, validate `Origin` or the origin derived from `Referer` against the site's canonical origin and reject `Sec-Fetch-Site: cross-site` as defense in depth. These checks supplement, rather than replace, a server-issued CSRF token.
+
 For scoped bearer endpoints, reject cookie fallback. A cross-site form cannot set a custom bearer header, but a mixed bearer-or-cookie endpoint restores CSRF risk and must use the cookie-authenticated rules.
 
 ## Anonymous Lifecycle Exceptions
@@ -54,10 +56,12 @@ Prefer placing workers and shared private application code outside the public we
 Protect status endpoints with administrator or explicit operator permission. Return only:
 
 - service display name,
-- canonical variable name,
 - configured boolean,
 - safe source label,
+- deliberately non-secret model ID and purpose when operationally useful,
 - normalized test result and timestamp.
+
+Return canonical configuration key names only when operators need them for remediation. Do not repeat them when the service title is sufficient, and never label managed-file-only keys as environment variables.
 
 Never return a value, private path, environment dump, PHP error, stack trace, authorization header, or raw provider body. Rate-limit manual tests and disclose when a test consumes provider quota.
 
