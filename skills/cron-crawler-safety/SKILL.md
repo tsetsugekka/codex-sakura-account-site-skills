@@ -1,6 +1,6 @@
 ---
 name: cron-crawler-safety
-description: Use when building, auditing, or repairing cron-driven crawlers, scrapers, scheduled feed collectors, SEO injectors, JSON generators, or static-site data refresh jobs for Sakura Server or other small websites, especially when existing cron/Python docs, live-data ownership, per-host pacing, sparse shared cron dispatch, locks, atomic writes, failure-only email, or deploy-safe cron-injected HTML are involved.
+description: Use when building, auditing, or repairing cron-driven crawlers, scrapers, scheduled feed collectors, SEO injectors, JSON generators, or static-site data refresh jobs for Sakura Server or other small websites, especially when existing cron/Python docs, live-data ownership, per-host pacing, locks, atomic writes, failure-only email, or deploy-safe cron-injected HTML are involved.
 ---
 
 # Cron Crawler Safety
@@ -19,10 +19,6 @@ Before editing or adding a job, inspect the project-specific sources:
 - public output files, private cache/history paths, lock/stamp files, and live HTML marker names.
 
 If the project has a `README/SPEC/CHANGELOG` pattern, update those docs in the same task when changing crawler behavior, cron timing, deploy protection, SEO output, alerts, data ownership, or recovery steps.
-
-## Cron Consolidation and Exact Dispatch
-
-When adding or changing cron entries, read [Cron consolidation and exact dispatch](references/cron-consolidation.md). Keep one authoritative exact schedule, derive a minimal wake-up envelope, and skip off-slot work before credential, source, or network access except necessary local state and queue locking. Consolidate related jobs only when runtime, permissions, latency, dependencies, and failure isolation allow it. Record wakeups separately from work slots and actual task executions; back up and replace only the owned cron block, then verify the installed schedule.
 
 ## Required Behavior
 
@@ -66,7 +62,6 @@ When adding or changing cron entries, read [Cron consolidation and exact dispatc
 1. Inventory the real job.
    - List cron entry, wrapper, source URLs/APIs, source host groups, command flags, output files, logs, locks, stamps, queues, and docs.
    - Read `references/cron-job-patterns.md`.
-   - For schedule changes, apply the consolidation reference above and verify exact-slot coverage, off-slot no-op behavior, timezone/lead-time conversion, and installed cron readback.
 2. Audit source access and request pacing.
    - Read `references/safe-crawling-policy.md`.
    - Add per-host throttle, randomized sleeps, bounded retries, and backoff.
