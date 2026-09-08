@@ -134,6 +134,8 @@ Alert body should include job name, slot, host, cwd, command label, exit code, t
 
 ## Cron Entry Example
 
+For new or changed schedules, first apply [cron consolidation and exact dispatch](cron-consolidation.md). The frequency below is illustrative, not a default; derive it from actual work slots or queue latency requirements.
+
 ```cron
 */15 * * * * /path/to/tools/run-example-crawler.sh >/dev/null 2>&1
 ```

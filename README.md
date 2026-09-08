@@ -21,7 +21,7 @@
 | `sakura-mailbox-setup` | Sakura mailbox、DNS、sender、PHP/sendmail、配信確認 |
 | `sakura-auth-site-setup` | 登録、メール確認、パスワード回復、session、role/page/API 権限 |
 | `sakura-api-secrets-deploy` | API credential/model 設定の private store、明示的 source policy、atomic migration、API gate、CSRF、SSRF、防漏洩 deploy |
-| `cron-crawler-safety` | crawler の throttle、lock、atomic write、failure-only alert |
+| `cron-crawler-safety` | 関連 cron の統合・正確な時刻分岐、crawler の throttle、lock、atomic write、failure-only alert |
 | `data-growth-guard` | 無制限に増えるファイルの監査、守衛構築、公開/非公開データ・分割・snapshot 設計 |
 | `static-deploy-refresh-check` | stale asset 回避、live data 保護、旧 hash asset cleanup |
 | `public-page-seo-assist` | 公開 SPA/静的ページの metadata、noscript、SEO marker |
@@ -67,6 +67,12 @@
 - **困りごと:** cron で動く crawler や scraper が、失敗時に気づけない。二重起動、途中書き込み、古い JSON 上書き、過剰アクセス、SEO 注入ブロック消失が怖い。
 - **Codex がすること:** まず既存の cron wrapper、Python/JS crawler、README/SPEC/CHANGELOG を読み、実際の運用から data ownership、cache、batch、SEO marker、restore 手順を確認する。そのうえで per-host random sleep、lock/stamp、timeout、atomic write、last-good 保護、failure-only mail、ログ、デプロイ時の live HTML marker マージを整える。
 - **できあがる状態:** crawler は source に連続高頻度アクセスせず、失敗時だけ通知し、成功・lock skip・no-op・予定された defer ではメールしない。公開 JSON/HTML は壊れにくく、cron が作った live data や `<noscript>` SEO をデプロイで消しにくくなる。
+
+#### Cron の統合と正確な時刻分岐
+
+同じワークフローの関連ジョブは共通入口へまとめ、必要な分・時・曜日の最小集合で起動します。実行対象がない組み合わせは、必要なローカル状態確認やキューロックを除き、認証情報・データ取得・外部 API・AI 呼び出しの前に SKIP します。低遅延キューや異なる権限・依存関係・障害境界まで無理に一つへ統合しません。
+
+週あたりの起動回数、実際の作業時点数、追加 SKIP を区別して記録し、タイムゾーン・日付跨ぎ・必要な先行時間を検証します。既存 crontab をバックアップし、自分の管理ブロックだけ置換して、インストール後に読み戻します。具体例と検証手順は [汎用 Cron 統合ガイド（中文）](skills/cron-crawler-safety/references/cron-consolidation.md) を参照してください。
 
 ### 6. 静的ページ公開後の表示崩れ・古いファイル対策
 
