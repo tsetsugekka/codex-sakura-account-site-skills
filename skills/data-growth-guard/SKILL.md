@@ -3,7 +3,7 @@ name: data-growth-guard
 description: Audit servers and website data directories for single files that may grow without a ceiling, produce evidence-based growth reports, scaffold a persistent growth guard, and design bounded public/private data architecture with retention, period shards, indexes, consumer-specific frontend snapshots, exact detail reads, atomic publication, and safe migration. Use when JSON, logs, exports, caches, histories, feeds, or generated datasets keep getting larger; when setting up cron-based file-growth monitoring and alerts; or when deciding how a crawler-backed site should separate private runtime state from public archives and bounded projections.
 ---
 
-# Data Growth Guard
+# 増え続けるサーバーデータを監視し、肥大化を防ぐ
 
 Use this skill to answer three related questions:
 

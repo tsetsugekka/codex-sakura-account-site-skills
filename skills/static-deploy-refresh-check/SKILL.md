@@ -3,7 +3,7 @@ name: static-deploy-refresh-check
 description: Add and maintain safe static-page deploy behavior for static or Vite-built pages. Use when Codex needs to prevent users from seeing stale JS/CSS after publishing a new page or new styles, batch retrofit old pages, patch deploy-preparation scripts, keep only current and previous hashed asset generations on Sakura, protect cron/generated live data from overwrite, merge cron-injected HTML from the live server, or ensure newly created static pages include cache-busting and safe cleanup behavior.
 ---
 
-# Static Deploy Refresh Check
+# サイト更新後に古い画面が残るキャッシュ問題を防ぐ
 
 ## Goal
 

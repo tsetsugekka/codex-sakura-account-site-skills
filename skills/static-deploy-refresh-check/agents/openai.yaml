@@ -1,4 +1,4 @@
 interface:
-  display_name: "公開後のページ更新を確認する"
-  short_description: "生成物と資産の更新を確認し、定時生成データを配布時に保護する"
-  default_prompt: "$static-deploy-refresh-check を使い、既存の公開手順に沿って資産・正文・データの更新を区別し、実際の応答を確認してください。"
+  display_name: "サイト更新後に古い画面が残るキャッシュ問題を防ぐ"
+  short_description: "資産の更新とキャッシュ、定時生成データの配布保護を確認する"
+  default_prompt: "$static-deploy-refresh-check を使い、既存の公開手順に沿って資産・本文・データの更新を区別し、実際の応答を確認してください。"

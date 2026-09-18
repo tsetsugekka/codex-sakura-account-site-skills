@@ -1,4 +1,4 @@
 interface:
-  display_name: "検索本文と共有表示を確認する"
-  short_description: "初期本文と描画後の内容、正規URL、共有カードを分けて確認する"
+  display_name: "公開ページのSEOとSNS共有プレビューを整える"
+  short_description: "初期本文、メタ情報、正規URL、SNS共有表示を確認する"
   default_prompt: "$public-page-seo-assist を使い、初期HTMLと描画後の本文、共有メタ情報を確認し、対象ページの範囲で改善してください。"

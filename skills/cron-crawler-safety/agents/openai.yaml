@@ -1,4 +1,4 @@
 interface:
-  display_name: "Cron Crawler Safety"
-  short_description: "Cron crawler hardening from real project scripts"
+  display_name: "cronでWebデータを安全に定期収集する"
+  short_description: "時刻表、アクセス制限、排他、公開保護、失敗通知を整える"
   default_prompt: "Use $cron-crawler-safety to inspect this project's real cron scripts and docs, then harden crawling pace, locks, atomic outputs, live-data deploy protection, and failure-only alerts."

@@ -3,7 +3,7 @@ name: public-page-seo-assist
 description: Audit or improve initial HTML body, metadata, canonical URLs and social previews for website pages. Use when public content is missing after JavaScript rendering, search finds only the URL, or sharing shows a wrong title; preserve protected content and existing page contracts.
 ---
 
-# Public Page SEO Assist
+# 公開ページのSEOとSNS共有プレビューを整える
 
 Inspect source HTML, the generator/build path, the live response and rendered DOM. Distinguish public/indexable pages from protected/shareable pages; preserve the site's access and indexing policy. Search results, a readable source response and an actual Google indexed version are different evidence.
 

@@ -3,7 +3,7 @@ name: web-performance-slimming
 description: Measure and reduce website loading and transfer costs while preserving content and UI. Use for gzip checks, heavy JSON, repeated polling, deferred detail loads, or before-and-after performance reviews; keep audit-only and compression-only requests within scope.
 ---
 
-# ページの読み込みを軽くする
+# 重いWebページの原因を調べ、読み込みを軽くする
 
 入力は対象ページ、ソース、利用できる測定環境と変更範囲。出力は実測に基づく優先順位、許可された修正、変更前後の確認結果。サーバー保存量の増加は `data-growth-guard` が担当する。
 

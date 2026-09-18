@@ -11,11 +11,11 @@
 | やりたいこと | 最初に使うスキル |
 | --- | --- |
 | 既存サイトに新しいページを追加する | [新ページ作成](skills/new-page-creation-guide/SKILL.md) |
-| ページが重い。まず原因や改善価値を知りたい | [読み込みの軽量化](skills/web-performance-slimming/SKILL.md) |
-| 検索本文や共有カードを確認したい | [SEO・共有表示](skills/public-page-seo-assist/SKILL.md) |
-| 公開したのに古い画面が出る | [公開後の更新確認](skills/static-deploy-refresh-check/SKILL.md) |
-| 履歴・キャッシュ・ログが増え続ける | [データ増加の監査](skills/data-growth-guard/SKILL.md) |
-| 定時収集を安全に運用したい | [定時収集の運用](skills/cron-crawler-safety/SKILL.md) |
+| ページが重い。まず原因や改善価値を知りたい | [読み込みを軽くする](skills/web-performance-slimming/SKILL.md) |
+| 検索本文や共有カードを確認したい | [SEOとSNS共有を整える](skills/public-page-seo-assist/SKILL.md) |
+| 公開したのに古い画面が出る | [古い画面が残る問題を防ぐ](skills/static-deploy-refresh-check/SKILL.md) |
+| 履歴・キャッシュ・ログが増え続ける | [データの肥大化を防ぐ](skills/data-growth-guard/SKILL.md) |
+| 定時収集を安全に運用したい | [Webデータを安全に定期収集する](skills/cron-crawler-safety/SKILL.md) |
 | サイトの接続・メール・会員機能を用意したい | 下の「基盤を整える」から選択 |
 
 新ページ作成は入口役です。本文、共通のメニュー・ヘッダー・フッター、読み込み、保存、公開を確認し、必要な専門スキルだけを組み合わせます。既存ページを直すときは、各スキルを単独で使えます。新ページを作るために旧ページや既存の記事生成器を一括改造することはありません。
@@ -24,14 +24,14 @@
 
 ### ページを作る・改善する
 
-| スキル名 | 担当すること |
+| スキル（表示名 / 識別子） | 担当すること |
 | --- | --- |
-| `new-page-creation-guide` | プロジェクトの共通部品と規約を使い、新しいページの構成と確認手順を選ぶ |
-| `web-performance-slimming` | 初回と滞在中の転送量を測り、圧縮・重複取得・必要範囲の読み込みを改善する |
-| `public-page-seo-assist` | 初期本文、検索用メタ情報、正規 URL、共有カードを確認する |
-| `static-deploy-refresh-check` | 配布順序、古い資産参照、サーバー生成データの保護、公開後の更新を確認する |
-| `data-growth-guard` | 無制限な増加を観測し、原本・公開用データ・キャッシュ・保存期間を整理する |
-| `cron-crawler-safety` | 定時処理の時刻、アクセス間隔、排他制御、検証、失敗通知を整える |
+| [新しいページを既存サイトに組み込む](skills/new-page-creation-guide/SKILL.md)<br>`new-page-creation-guide` | プロジェクトの共通部品と規約を使い、新しいページの構成と確認手順を選ぶ |
+| [重いWebページの原因を調べ、読み込みを軽くする](skills/web-performance-slimming/SKILL.md)<br>`web-performance-slimming` | 初回と滞在中の転送量を測り、圧縮・重複取得・必要範囲の読み込みを改善する |
+| [公開ページのSEOとSNS共有プレビューを整える](skills/public-page-seo-assist/SKILL.md)<br>`public-page-seo-assist` | HTMLで返す本文、検索用メタ情報、正規 URL、共有カードを確認する |
+| [サイト更新後に古い画面が残るキャッシュ問題を防ぐ](skills/static-deploy-refresh-check/SKILL.md)<br>`static-deploy-refresh-check` | 配布順序、古い資産参照、サーバー生成データの保護、公開後の更新を確認する |
+| [増え続けるサーバーデータを監視し、肥大化を防ぐ](skills/data-growth-guard/SKILL.md)<br>`data-growth-guard` | 無制限な増加を観測し、原本・公開用データ・キャッシュ・保存期間を整理する |
+| [cronでWebデータを安全に定期収集する](skills/cron-crawler-safety/SKILL.md)<br>`cron-crawler-safety` | 定時処理の時刻、アクセス間隔、排他制御、検証、失敗通知を整える |
 
 ### 基盤を整える
 

@@ -3,7 +3,7 @@ name: cron-crawler-safety
 description: Use when building, auditing, or repairing cron-driven crawlers, scrapers, scheduled feed collectors, SEO injectors, JSON generators, or static-site data refresh jobs for Sakura Server or other small websites, especially when existing cron/Python docs, live-data ownership, per-host pacing, locks, atomic writes, failure-only email, or deploy-safe cron-injected HTML are involved.
 ---
 
-# Cron Crawler Safety
+# cronでWebデータを安全に定期収集する
 
 Use this skill for website cron jobs and crawler/scraper pipelines that update public pages, JSON feeds, SEO fallback blocks, alerts, cached data, or sitemap files.
 
