@@ -1,4 +1,4 @@
 interface:
-  display_name: "Static Deploy Refresh Check"
-  short_description: "Refresh stale pages and prune old assets"
-  default_prompt: "Use $static-deploy-refresh-check to add one-time deploy refresh checks, keep only current and previous static asset generations, protect live cron data, and include the behavior when creating new pages."
+  display_name: "公開後のページ更新を確認する"
+  short_description: "生成物と資産の更新を確認し、定時生成データを配布時に保護する"
+  default_prompt: "$static-deploy-refresh-check を使い、既存の公開手順に沿って資産・正文・データの更新を区別し、実際の応答を確認してください。"

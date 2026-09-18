@@ -55,12 +55,12 @@ If the project owns `sitemap.xml`, keep it complete and generated from the deplo
 - do not assume every indexable route must be listed, especially for large archives or permanent detail collections,
 - exclude login-only, staff-only, private, draft, or `noindex` pages,
 - make `<loc>` match canonical and `og:url`,
-- use deploy-time `<lastmod>` for pages whose public data refreshes daily,
-- when cron jobs update public data outside manual deploys, refresh `sitemap.xml`, `robots.txt`, or the project's equivalent SEO index after successful writes so `<lastmod>` moves with data updates,
-- use source/content mtime or a conservative date for static tools and non-news pages,
+- use a known significant content modification time for `<lastmod>` when the project includes it; omit it when unknown or intentionally excluded,
+- use the same SEO index generator after relevant content changes; a cron wakeup or unchanged write must not advance `<lastmod>`,
+- do not use deployment time or an invented conservative date as a content modification date,
 - include generated `robots.txt` and `sitemap.xml` in the upload manifest when publishing to Sakura.
 
-Do not commit hardcoded daily dates that will become stale. Generating sitemap metadata during deploy and after successful cron public-data writes is safer for sites with cron-refreshed pages.
+Keep sitemap generation tied to the project's content contract, not merely its deployment clock.
 
 ## Structured Data Choices
 
@@ -81,19 +81,13 @@ unless the page is actually a dated article and the user wants Google to underst
 
 ## Crawlable Body Context
 
-JavaScript-heavy apps often start with an empty root. Add enough static body context so crawlers and no-JavaScript clients can understand the page:
+Choose the body the page actually needs to expose: article/report content, relevant ranking entries, or tool explanation and an optional bounded summary. Deliver that body as normal HTML when this is the agreed design. Keep large chart histories and interaction data separate.
 
-- one `<h1>` visible or `sr-only`,
-- one or two stable summary paragraphs,
-- a `noscript` fallback with the page purpose, important domains/entities, and natural search intents.
-
-For app pages with visible UI, prefer a screen-reader-only summary over large duplicate intro text if the visible product surface should stay dense.
-
-When the initial response contains route-specific visible content, include the production stylesheet early enough that users do not see an unstyled SEO document before the application hydrates. Prefer hydrating or enhancing the same semantic structure over replacing it with a second, visually different copy.
+Check source HTML and rendered DOM independently. Mounting an application can remove initial content, including a `noscript` block inside its root. Keep content ownership explicit; hydration requires matching markup/data. Test first-load failure as well as refresh failure. Include production styles before visible content to avoid unstyled or duplicate layouts.
 
 ## Noscript Static SEO
 
-Use `noscript` for stable, public, crawlable fallback:
+Use `noscript` for a public no-JavaScript fallback; it does not establish what a JavaScript-enabled crawler sees:
 
 ```html
 <noscript>

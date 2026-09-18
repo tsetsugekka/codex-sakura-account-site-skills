@@ -20,6 +20,14 @@ Before editing or adding a job, inspect the project-specific sources:
 
 If the project has a `README/SPEC/CHANGELOG` pattern, update those docs in the same task when changing crawler behavior, cron timing, deploy protection, SEO output, alerts, data ownership, or recovery steps.
 
+## Exact scheduling
+
+- Use one authoritative timetable for actual times, weekdays, timezone and enabled jobs. Preserve business times, cross-day and daylight-saving behavior.
+- Combine related work through an existing dispatcher where practical. Generate cron from the smallest needed minute/hour/weekday sets; count Cartesian extra wakeups rather than defaulting to every minute or all-day polling.
+- Match due work before credentials, collection and external calls; retain only necessary queue/state checks. Merge simultaneous work and read shared sources once.
+- Before installation, report weekly wakeups, work times and extra SKIPs. Verify every target is covered and off-slot runs make no external calls.
+- Back up the current crontab, replace only the owned block, remove superseded owned entries and read back the result. Do not install a second scheduler simply to add a check.
+
 ## Required Behavior
 
 - Preserve the production data contract:

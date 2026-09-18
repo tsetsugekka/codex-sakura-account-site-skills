@@ -19,7 +19,13 @@ Use this skill when:
 - merging HTML regions that are updated on the server before publishing,
 - fixing reports such as "new page published but old CSS still appears" or "users must hard refresh".
 
-## Required Behavior
+## Scope and evidence
+
+Read the existing build, generator and deployment flow first. Distinguish changed JS/CSS references, regenerated HTML body and refreshed data: success in one does not prove the others updated. The bundled injector checks once after page startup; it is not a persistent monitor and does not compare body text or JSON. Preserve an existing equivalent mechanism instead of adding another one.
+
+Use the injection workflow below when that refresh behavior is requested or already part of the project contract. A new page can reuse its existing site's deployment contract without introducing a second reload mechanism.
+
+## Injection workflow behavior
 
 - Add HTML revalidation metadata to each entry page:
   - `Cache-Control: no-cache, must-revalidate`
@@ -88,7 +94,7 @@ python3 skills/static-deploy-refresh-check/scripts/inject_deploy_refresh.py --wr
 
 ## New Pages
 
-When creating a new static page or Vite app, add this skill's behavior as part of the page template or deploy workflow:
+Reuse the site's verified deployment flow. When it uses this refresh mechanism, integrate it through the page template or deploy workflow:
 
 1. Put the HTML revalidation meta tags in the source `index.html`.
 2. Ensure the deploy-preparation script injects the deploy refresh script into the staged HTML.
@@ -126,7 +132,7 @@ Use this order for old pages:
 10. Verify the live page loads and references the new asset hashes.
 11. Dry-run old asset cleanup for that page.
 12. Apply cleanup only if it keeps current plus previous generations and deletes only older hashed assets.
-13. Test a stale-page scenario if practical: open old page, deploy new asset hash, wait for the check, confirm one reload with `__deploy_v`, then confirm `history.replaceState` removes `__deploy_v` from the visible URL.
+13. Test a stale-page scenario if practical: deploy a new asset hash, load a cached old entry, observe the startup check, confirm one reload with `__deploy_v`, then confirm `history.replaceState` removes `__deploy_v` from the visible URL.
 
 ## Safety Rules
 
@@ -139,6 +145,12 @@ Use this order for old pages:
 - Do not compare cross-origin scripts, analytics tags, CDN CSS, or third-party assets.
 - Do not force refresh all pages globally when only one page was updated.
 - Do not change service worker behavior unless the project already has a service worker and the issue is proven to involve it.
+
+## Generated output verification
+
+Follow the authoritative template/generator to rebuild affected pages; do not repair only a generated file. Update compressed counterparts with their source response and verify the browser actually receives the new version. Check real HTTP cache/encoding headers as well as HTML tags.
+
+After deployment, verify direct URLs and normal refresh, JS/CSS availability, protected live regions and the body version. For automatic generation, separately verify the next normal generation path; do not call it complete from a single manual upload. Keep internal maintenance documents out of public upload manifests.
 
 ## Resources
 

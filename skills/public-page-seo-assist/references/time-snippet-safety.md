@@ -4,7 +4,7 @@ Use this reference whenever a public page displays data update times, post times
 
 ## Principle
 
-A page may show data time to users, but Google snippets should not read those times as the page's publication date unless the route is intentionally a dated article or news detail and the timestamp truthfully describes that content.
+Separate data time from page publication time. When the project wants data timestamps excluded from snippets, apply the pattern below; do not claim that it controls every search-result date. Preserve genuine article dates and necessary visible data periods.
 
 For dashboards, tools, aggregate feeds, rankings, and continuously updated application pages, handle this in two layers:
 
@@ -64,7 +64,7 @@ Apply this to:
 
 Do not apply this mechanically to the primary publication time of a genuine article or news-detail route when that time is intentionally part of the searchable content.
 
-If a parent row is entirely timestamp/status metadata, `data-nosnippet` can be placed on the parent element.
+Use `data-nosnippet` on a supported `span`, `div` or `section`, including a wrapper around a time label. Do not place it directly on a `time`, `td` or `footer`.
 
 ## Do Not Use Structured Page Date Fields
 
@@ -84,8 +84,8 @@ For dashboards, tools, feeds, rankings, and app pages, use `WebApplication` or `
 
 Use it carefully:
 
-- daily-updated public data pages can generate today's deploy date as `<lastmod>`,
-- static tools and non-news pages should use source/content mtime or a conservative update date,
+- use the actual significant content modification date where the project includes `<lastmod>`; a deployment date alone is insufficient,
+- omit `<lastmod>` when its value is unknown or the project intentionally omits it,
 - avoid committing hardcoded daily `<lastmod>` values that will become stale,
 - keep volatile data-freshness dates out of non-article `noscript`, static SEO body text, JSON-LD, and HTML comments even when sitemap uses `<lastmod>`.
 

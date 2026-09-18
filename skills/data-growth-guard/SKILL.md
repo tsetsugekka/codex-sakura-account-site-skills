@@ -55,6 +55,14 @@ For a server, prefer executing the public-safe checker remotely from a private o
 - State sampling limits. ISO-date sampling cannot prove that binary databases, compressed archives, unsorted records, or files without recognizable dates are bounded.
 - Never delete, truncate, repartition, upload, or change cron while performing an audit-only request.
 
+## Directory hygiene and recovery value
+
+When the request concerns old files, names or backups, keep that scope separate from a capacity/security audit. Classify active paths, retired paths, old/new names still in use, temporary remnants and backups with independent recovery value. Verify readers, writers and references before proposing removal; include parent directories that lose their purpose after a confirmed cleanup.
+
+Use the project's common backup root outside the web root, grouped by task and batch, with purpose, restore source and review date. Do not scatter new backups across application directories. Do not silently relocate or delete existing backups. When migrating a writer, update write/read/restore/cleanup paths together rather than double-writing.
+
+The bundled checker observes eligible single files, not total storage health. Date shards, excluded media/backups and the number of files require a separate directory inventory when relevant. Large or old does not mean disposable; bounded public snapshots do not imply short retention for authoritative history.
+
 ## Architecture invariants
 
 - Put credentials, cursors, raw scrape caches, review state, locks, logs, queues, and repair backups outside the public web root.

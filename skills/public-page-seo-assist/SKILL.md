@@ -1,190 +1,38 @@
 ---
 name: public-page-seo-assist
-description: Use when improving or auditing metadata for public or private Sakura-hosted pages, JavaScript app entry pages, dashboard/tool pages, or cron-updated pages, especially when redirects or social previews show the wrong title or URL.
+description: Audit or improve initial HTML body, metadata, canonical URLs and social previews for website pages. Use when public content is missing after JavaScript rendering, search finds only the URL, or sharing shows a wrong title; preserve protected content and existing page contracts.
 ---
 
 # Public Page SEO Assist
 
-## Goal
+Inspect source HTML, the generator/build path, the live response and rendered DOM. Distinguish public/indexable pages from protected/shareable pages; preserve the site's access and indexing policy. Search results, a readable source response and an actual Google indexed version are different evidence.
 
-Improve SEO for public pages and social link previews for private pages without turning volatile app data into misleading Google publication dates or making protected routes indexable.
+## Body delivery
 
-Use this skill for both publicly indexable pages and private pages whose links are shared in chat or social applications. For login-only, staff-only, or private pages, do not add indexable SEO fallback content; use `noindex` and the project's access-control pattern while still providing safe, page-specific sharing metadata.
+Read [public-page-seo-patterns.md](references/public-page-seo-patterns.md) when changing head or body delivery.
 
-This skill should align the page-identity signals before considering the work complete:
+- Identify what the user wants searchable. Fixed explanations can be ordinary HTML; articles, reports and rankings need their actual relevant content, not merely a product description. Chart/calculation tools need not embed their entire history.
+- JSON can remain the source of truth. Choose build-time generation, the existing content update process or server rendering to fit the project; do not require a new scheduler or framework for every page.
+- `noscript` is a no-JavaScript fallback, not proof that Google received the intended rendered body. Inspect whether application mounting replaces it or other initial content.
+- Define which code owns initial HTML and interactive content. Do not remove useful initial content simply because JS started. Hydration needs matching markup and initial data; plain generated HTML cannot be arbitrarily hydrated. Avoid duplicate visible bodies or unstyled flashes.
+- Test first-visit data failure separately from refresh failure: a new visitor has no previously loaded data. Preserve an available, valid snapshot under the site's freshness rules and show its status truthfully. Do not invent a snapshot or remove generation validation to suppress errors.
+- Report uncertain causes precisely. A generic generation-mismatch message may represent mode, count or timestamp validation too; inspect the actual condition before naming a root cause.
 
-- page `<head>` canonical URL,
-- Open Graph `og:url`,
-- the actual final public URL after redirects, trailing-slash handling, and extensionless aliases.
+These are design and verification criteria, not a claim that an untested architecture has already fixed indexing. Retrofit only the requested routes/generators. Preserve excluded subsystems and their independently maintained metadata contracts.
 
-When the page is intentionally listed in a sitemap, its `sitemap.xml` `<loc>` must use that same final URL. A public, indexable page does not have to appear in every sitemap; sitemap inclusion is a discovery policy, not an indexability requirement.
+## Metadata and sharing
 
-For private pages, replace the sitemap/indexability signal with a protected share-preview signal:
+1. Emit charset, title, description, canonical, OG/Twitter and appropriate robots in the initial response before application/analytics scripts. Charset belongs near the start of head. Align canonical and `og:url` with the final route, and sitemap `loc` when listed.
+2. Follow the project's favicon and language conventions. Choose structured data matching the page: tools are not articles merely because their data changes. Read [time-snippet-safety.md](references/time-snippet-safety.md) for data times versus genuine publication dates.
+3. Use truthful significant-content modification dates for sitemap `lastmod` when available and permitted by the project; omit when not known or the project omits it. A deploy/cron wakeup alone is not a content change.
+4. For protected sharing, read [private-page-sharing-patterns.md](references/private-page-sharing-patterns.md). Expose only safe route-specific metadata at the gate; do not weaken login or API authorization.
+5. For image cards and social-client problems, read [social-preview-verification.md](references/social-preview-verification.md). Use a representative public image with truthful dimensions, not a favicon or private asset. A text-only card is an intentional compatibility limitation.
+6. Identify server-owned HTML regions. Preserve their markers and current content through the existing generator/deploy process; combine with `static-deploy-refresh-check` when relevant.
 
-- `robots` must remain `noindex, nofollow`;
-- the page must not be added to `sitemap.xml`;
-- the final unauthenticated HTML should still have a page-specific `<title>`, description, canonical, `og:url`, and Twitter/Open Graph card;
-- metadata must describe the page purpose without exposing private records, user data, or volatile internal timestamps.
+## Verification
 
-## Private Page Sharing Cards
-
-When a private page is shared, social crawlers normally have no login cookie. Do not let the authentication layer redirect every private route to a generic portal URL, because the crawler will then use the portal's title and description. Preserve the requested internal path and query in a safe login return parameter, and render target-specific sharing metadata on the login/gate response. See `references/private-page-sharing-patterns.md`.
-
-This changes only the preview metadata, not access control: the actual private content and APIs remain protected. Keep AI Hub or other explicitly excluded subsystems on their existing behavior when their metadata is managed separately.
-
-Do not add `og:image` just to fill a checklist. A missing social image is better than a tiny favicon, stale screenshot, relative path, private asset, or low-quality preview. However, treat that as an intentional text-only degradation: the Open Graph basic object includes an image, so maximum cross-platform card reliability requires a real representative image.
-
-## Workflow
-
-1. Classify the page before editing:
-   - public/indexable: route is not behind login, `robots` may be `index, follow`, and content is safe for search snippets;
-   - private/shareable: route is behind login or staff permission, `robots` must be `noindex, nofollow`, but link-preview metadata should identify the target page;
-   - excluded subsystem: follow the subsystem's own documented metadata rules.
-2. Inspect existing head tags, route aliases, build/deploy flow, and whether cron or server scripts write live data into the entry HTML.
-3. Add or repair the page-level SEO package:
-   - declare UTF-8 near the start of `<head>` and before executable scripts,
-   - stable `<title>`,
-   - `<meta name="description">`,
-   - canonical URL,
-   - Open Graph card,
-   - `og:url` matching the canonical URL,
-   - Twitter card,
-   - `og:locale`,
-   - `og:site_name`,
-   - favicon/touch icon if the project has them,
-   - `robots` only when appropriate.
-   - For private pages, use the private share-preview pattern instead of indexable fallback content.
-   - Emit all title/description/canonical/OG/Twitter tags in the initial HTML response. Social crawlers generally do not run the page JavaScript, so client-side head injection is not a fallback.
-4. Decide whether the page should have `og:image`:
-   - add it only for a stable, high-quality, public, absolute HTTPS image,
-   - serve the declared social-preview image from a URL controlled by the site; do not make the card depend on a third-party hotlink,
-   - when the source image belongs to another origin, cache or mirror it only when usage rights and the site's retention policy allow it; otherwise use a suitable site-owned image or publish a text-only card,
-   - when present, add its HTTPS URL, MIME type, truthful dimensions, and alt text as adjacent structured properties,
-   - configure `twitter:image` explicitly when an X card is required; it may reuse `og:image` or use a content-equivalent platform-specific image,
-   - use `summary_large_image` only when the selected Twitter image suits that layout,
-   - do not use favicon or small icon files as the fallback social image,
-   - remove old relative, unauthorized, unstable, or weak `og:image` / `twitter:image` tags when they create a worse preview than no image.
-5. Use structured data conservatively:
-   - `WebSite` for the site top page,
-   - `WebApplication` for interactive tools,
-   - `SoftwareApplication` only when that is a better fit for the product,
-   - no `datePublished`, `dateModified`, or article-style dates unless the page is genuinely an article.
-6. Add crawlable body context:
-   - one real or screen-reader-only `<h1>`,
-   - a concise static summary near the app root when useful,
-   - a `<noscript>` fallback that explains the page and major entities/search intents.
-   - when route-specific body content is emitted in the initial response, load its production styles before displaying it and let hydration enhance the same structure rather than briefly exposing raw SEO text or duplicate layouts.
-7. If cron/server scripts update SEO fallback content, add stable marker comments around only that managed region and document ownership in the updater.
-8. If the page displays data update times, news times, X/SNS post times, generated-at times, or reviewed/updated labels, apply the time-snippet rules in `references/time-snippet-safety.md`.
-9. Repair sitemap coverage:
-   - include the public routes that the site's discovery policy chooses to advertise,
-   - do not infer that every indexable route must be listed,
-   - for each listed route, make `<loc>` match the canonical URL and `og:url`,
-   - use the final route form, such as trailing slash for directory pages and extensionless URL when that is the public route,
-   - generate `sitemap.xml` during deploy when daily data pages need fresh `<lastmod>`,
-   - when cron jobs successfully write public page data, refresh `sitemap.xml`, `robots.txt`, or the project's equivalent SEO index from the same server-side generator so `<lastmod>` follows data updates rather than only manual deploys,
-   - use source/content mtime or a conservative date for static tool pages and non-news pages.
-10. If the entry HTML is deployed statically and also has cron-managed HTML regions, combine this skill with `static-deploy-refresh-check` so live `<noscript>` regions are fetched and merged before publishing.
-11. Verify:
-   - built HTML contains one title, one canonical when applicable, and expected meta cards,
-   - canonical and `og:url` match the final public URL; sitemap `<loc>` matches too when the route is listed,
-   - `og:image` is absent unless a real preview image passes the quality/stability check,
-   - JSON-LD parses as valid JSON and has no article date fields unless intentionally article-like,
-   - `<noscript>` contains useful public text but no misleading freshness timestamps; genuine dated article pages follow the article-time exception in `references/time-snippet-safety.md`,
-   - visible UI timestamps that may be indexed use `data-nosnippet`,
-   - cron-managed markers remain intact after build/deploy preparation,
-   - deploy manifests upload generated `robots.txt` and `sitemap.xml` when the project owns those files.
-   - request the final URL with both Discordbot and TelegramBot user agents and inspect the returned HTML, status, redirects, and content type; do not infer card behavior only from a normal browser,
-   - for Telegram and Discord, send the test message before judging it because the composer preview can be substantially more compact than the final card.
-
-## Required References
-
-- Read `references/public-page-seo-patterns.md` before adding or restructuring SEO head/body fallback.
-- Read `references/time-snippet-safety.md` whenever the page has update times, post times, news times, generated-at labels, or reviewed/updated states.
-- Read `references/private-page-sharing-patterns.md` for login-only, staff-only, or otherwise protected routes that need correct social/link previews.
-- Read `references/social-preview-verification.md` whenever Discord, X, Slack, LINE, Telegram, or another link-preview client shows a blank/generic card.
-
-## Public Page Pattern
-
-Prefer this shape for static app entry HTML:
-
-```html
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PTS急騰株分析 - 上昇理由をAI分析</title>
-<link rel="canonical" href="https://example.com/pts/" />
-<meta name="description" content="PTSで急騰した銘柄の材料、テーマ、出来高変化を整理し、翌営業日の注目点を確認できます。">
-<meta name="robots" content="index, follow">
-
-<meta property="og:type" content="website">
-<meta property="og:title" content="PTS急騰株分析">
-<meta property="og:description" content="PTSで動いた銘柄の材料と市場テーマを整理します。">
-<meta property="og:url" content="https://example.com/pts/">
-<meta property="og:locale" content="ja_JP">
-<meta property="og:site_name" content="Example Market Tools">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="PTS急騰株分析">
-<meta name="twitter:description" content="PTSで動いた銘柄の材料と市場テーマを整理します。">
-```
-
-Use a `summary_large_image` Twitter card only when the page has a stable, high-quality preview image that is safe to expose. If the only available asset is a favicon, app icon, generated placeholder, or visually weak screenshot, leave `og:image` and `twitter:image` out.
-
-## Sitemap / Canonical Pattern
-
-When the project owns `sitemap.xml`, keep URL signals consistent:
-
-```xml
-<url>
-  <loc>https://example.com/pts/</loc>
-  <lastmod>2026-07-09</lastmod>
-  <changefreq>daily</changefreq>
-</url>
-```
-
-Rules:
-
-- Use the same final URL as the page canonical and `og:url`.
-- For daily-updated data pages, generate `<lastmod>` at deploy time instead of committing a stale static date.
-- If a cron job refreshes the public data independently of manual deploys, call the same sitemap/robots generator after successful public writes; SEO index refresh failure can be logged without turning a successful data job into failed output when the project has that policy.
-- For stable tools or non-news pages, use the file/content update date and a conservative `changefreq`.
-- `lastmod` in sitemap is allowed metadata; it is not the same as article/date markup in HTML.
-- Include generated `sitemap.xml` and `robots.txt` in the deploy upload manifest when the site root owns them.
-
-## Noscript Pattern
-
-For JavaScript-heavy public tools, include a real fallback:
-
-```html
-<noscript>
-  <section style="text-align:left;max-width:860px;margin:2rem auto;padding:0 1rem;line-height:1.7;">
-    <!-- TOOL_STATIC_SEO_START -->
-    <h2>ツール名と主要な検索意図</h2>
-    <p>このページで確認できる情報、対象市場、対象ユーザーを自然な文章で説明する。</p>
-    <!-- TOOL_STATIC_SEO_END -->
-  </section>
-</noscript>
-```
-
-Rules:
-
-- Keep the marker names unique per page.
-- Let cron update only the region between markers.
-- Make fallback content consistent with what users can see in the live UI.
-- Do not add hidden keyword stuffing.
-- Do not put private, paid, draft, or login-only details into `noscript`.
-- For dashboards, tools, aggregate feeds, rankings, and other continuously updated application pages, do not put volatile data-freshness timestamps in static SEO fallback. A genuine dated article or news-detail route may expose its truthful primary publication time.
-
-## Private Page Sharing Verification
-
-For private routes, test an unauthenticated request through the full redirect chain. The return parameter must preserve only an internal path/query, the final HTML must use target-specific title/description/canonical/OG/Twitter metadata, and `robots` must remain `noindex, nofollow`. Open Graph controls the preview card; the visible URL/title line is controlled by the sharing client or explicit share action.
-
-## Safety Rules
-
-- Do not make a private page indexable.
-- Do not add article structured data to tools, dashboards, feeds, or admin pages.
-- Do not use `<time datetime>`, `datePublished`, or `dateModified` for volatile data unless the page is truly an article page.
-- Do not write volatile data-freshness timestamps into non-article `<noscript>`, static summaries, SEO fallback, JSON-LD, or HTML comments. This does not prohibit truthful publication metadata on a genuine dated article or news-detail route.
-- Do not use HTML comments as daily SEO refresh stamps; use a server-side stamp file instead.
-- Do not overwrite live cron-managed SEO blocks during deploy; merge from the current live HTML first.
-- Do not treat metadata visible only after hydration as social metadata. The crawler response itself must contain the complete card.
-- Do not put analytics, import maps, app boot scripts, or blocking third-party scripts before charset and the core SEO/social metadata.
+- Initial response and JS-disabled view contain the agreed public body; normal rendered DOM still contains it. Check first-load errors, relevant generation mismatch and direct detail URLs.
+- Built and live head have the expected single title/canonical, valid JSON-LD and final URL signals. Inspect real response status and redirect chain.
+- Data timestamps use the project's snippet policy without disguising stale data as current. Keep internal prompts, permissions and operational notes out of public HTML, comments and payloads.
+- For sharing, request with the relevant crawler user agents and inspect response/image metadata. Actual chat sending needs user authorization; a composer preview is not final-card evidence.
+- Search Console rendered/crawled HTML, when available, is separate from local browser evidence. Do not promise indexing from tags, `noscript`, `site:` results or a different search backend.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "新しいページを既存サイトに組み込む"
+  short_description: "既存の共通部品と規約を使い、正文・データ・公開を順に確認する"
+  default_prompt: "$new-page-creation-guide を使い、対象プロジェクトの仕様と依頼範囲を確認して作業してください。"

@@ -134,8 +134,6 @@ Alert body should include job name, slot, host, cwd, command label, exit code, t
 
 ## Cron Entry Example
 
-```cron
-*/15 * * * * /path/to/tools/run-example-crawler.sh >/dev/null 2>&1
-```
+Generate the entry from the actual timetable as described in SKILL.md. The wrapper does not determine business due times; keep that decision in the existing dispatcher.
 
 Keep useful logging inside the wrapper or application log. Avoid cron daemon mail on every success.

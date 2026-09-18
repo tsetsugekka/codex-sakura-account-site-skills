@@ -12,7 +12,7 @@ The deploy refresh script solves the stale-entry problem common to static sites 
 6. If the signatures differ, it reloads once with a query parameter such as `__deploy_v=<hash>`.
 7. After the refreshed page loads, it removes `__deploy_v` from the address bar with `history.replaceState` without causing another reload.
 
-This is not a replacement for hashed filenames. It is a bridge that helps already-open or stale pages move to the latest entry HTML.
+The bundled script runs one check after startup. It is not a replacement for hashed filenames, a continuous monitor for an already-open page, or a check that generated body/data changed.
 
 ## HTML metadata
 

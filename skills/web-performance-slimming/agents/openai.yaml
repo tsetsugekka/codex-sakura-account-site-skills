@@ -1,0 +1,4 @@
+interface:
+  display_name: "ページの読み込みを軽くする"
+  short_description: "実転送量と再取得を測り、内容や画面を保ったまま読み込みを改善する"
+  default_prompt: "$web-performance-slimming を使い、対象プロジェクトの仕様と依頼範囲を確認して作業してください。"
