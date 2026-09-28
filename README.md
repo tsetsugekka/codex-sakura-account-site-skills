@@ -29,7 +29,7 @@
 | [新しいページを既存サイトに組み込む](skills/new-page-creation-guide/SKILL.md)<br>`new-page-creation-guide` | プロジェクトの共通部品と規約を使い、新しいページの構成と確認手順を選ぶ |
 | [重いWebページの原因を調べ、読み込みを軽くする](skills/web-performance-slimming/SKILL.md)<br>`web-performance-slimming` | 初回と滞在中の転送量を測り、圧縮・重複取得・必要範囲の読み込みを改善する |
 | [公開ページのSEOとSNS共有プレビューを整える](skills/public-page-seo-assist/SKILL.md)<br>`public-page-seo-assist` | HTMLで返す本文、検索用メタ情報、正規 URL、共有カードを確認する |
-| [サイト更新後に古い画面が残るキャッシュ問題を防ぐ](skills/static-deploy-refresh-check/SKILL.md)<br>`static-deploy-refresh-check` | 配布順序、古い資産参照、サーバー生成データの保護、公開後の更新を確認する |
+| [サイト更新後に古い画面が残るキャッシュ問題を防ぐ](skills/static-deploy-refresh-check/SKILL.md)<br>`static-deploy-refresh-check` | HTML応答の再検証、指紋付きJS/CSSの長期キャッシュ、配布順序と生成データ保護を確認する |
 | [増え続けるサーバーデータを監視し、肥大化を防ぐ](skills/data-growth-guard/SKILL.md)<br>`data-growth-guard` | 無制限な増加を観測し、原本・公開用データ・キャッシュ・保存期間を整理する |
 | [cronでWebデータを安全に定期収集する](skills/cron-crawler-safety/SKILL.md)<br>`cron-crawler-safety` | 定時処理の時刻、アクセス間隔、排他制御、検証、失敗通知を整える |
 

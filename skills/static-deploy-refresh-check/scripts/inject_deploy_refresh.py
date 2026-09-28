@@ -11,50 +11,75 @@ import sys
 
 
 DEFAULT_MARKER = "DEPLOY_REFRESH_CHECK_V1"
-REVALIDATION_META = (
-    '<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">',
-    '<meta http-equiv="Pragma" content="no-cache">',
-    '<meta http-equiv="Expires" content="0">',
-)
 
 
-def build_snippet(marker: str, check_param: str, version_param: str, storage_prefix: str) -> str:
+def build_snippet(marker: str, version_param: str, storage_prefix: str) -> str:
     marker_comment = f"<!-- {marker} -->"
-    check_param_js = json.dumps(check_param)
     version_param_js = json.dumps(version_param)
     storage_prefix_js = json.dumps(storage_prefix)
     return f"""{marker_comment}
     <script>
     (function () {{
-      var storageKey = {storage_prefix_js} + location.pathname;
+      // Navigation Timing retains the loaded URL even if the app later calls pushState.
+      var navigations = typeof performance !== 'undefined' && performance.getEntriesByType
+        ? performance.getEntriesByType('navigation') : [];
+      var loadedUrl = navigations.length && navigations[0].name || location.href;
+      var entryUrl;
+      try {{
+        entryUrl = new URL(loadedUrl, location.href);
+        if (entryUrl.origin !== location.origin) return;
+        entryUrl.hash = '';
+        entryUrl.searchParams.delete({version_param_js});
+      }} catch (_error) {{
+        return;
+      }}
+      var routeKey = {storage_prefix_js} + shortHash(entryUrl.pathname + entryUrl.search) + ':';
+      var interacted = false;
+      ['pointerdown', 'mousedown', 'click', 'keydown', 'compositionstart', 'input', 'change', 'submit',
+        'wheel', 'touchstart', 'focusin', 'scroll']
+        .forEach(function (name) {{
+          document.addEventListener(name, function () {{ interacted = true; }}, {{ capture: true, passive: true }});
+        }});
 
-      function pageUrl() {{
-        var pathname = location.pathname || '/';
-        if (pathname.charAt(pathname.length - 1) === '/') {{
-          pathname += 'index.html';
+      function stillOnLoadedEntry() {{
+        try {{
+          var currentUrl = new URL(location.href);
+          currentUrl.hash = '';
+          currentUrl.searchParams.delete({version_param_js});
+          return currentUrl.toString() === entryUrl.toString();
+        }} catch (_error) {{
+          return false;
         }}
-        var url = new URL(pathname, location.origin);
-        url.searchParams.set({check_param_js}, String(Date.now()));
-        return url.toString();
       }}
 
-      function normalizedLocalAsset(rawUrl) {{
+      function shouldSkipRefresh() {{
+        var active = document.activeElement;
+        return !stillOnLoadedEntry() || interacted ||
+          (document.visibilityState && document.visibilityState !== 'visible') ||
+          (active && (active.isContentEditable || /^(INPUT|TEXTAREA|SELECT|IFRAME)$/i.test(active.tagName)));
+      }}
+
+      function normalizedLocalAsset(rawUrl, baseUrl) {{
         if (!rawUrl) return '';
         try {{
-          var url = new URL(rawUrl, location.href);
+          var url = new URL(rawUrl, baseUrl);
           if (url.origin !== location.origin) return '';
-          var value = url.pathname + url.search;
-          if (!/\\.(js|css)(\\?|$)/.test(value)) return '';
-          return value;
+          if (!/\\.(js|css)$/i.test(url.pathname)) return '';
+          return url.pathname + url.search;
         }} catch (_error) {{
           return '';
         }}
       }}
 
       function signatureFromDocument(doc) {{
+        var baseUrl = entryUrl;
+        var baseNode = doc.querySelector('base[href]');
+        if (baseNode) {{
+          try {{ baseUrl = new URL(baseNode.getAttribute('href'), entryUrl); }} catch (_error) {{}}
+        }}
         var values = [];
         doc.querySelectorAll('script[src],link[rel~="stylesheet"][href]').forEach(function (node) {{
-          var value = normalizedLocalAsset(node.getAttribute('src') || node.getAttribute('href'));
+          var value = normalizedLocalAsset(node.getAttribute('src') || node.getAttribute('href'), baseUrl);
           if (value) values.push(value);
         }});
         values.sort();
@@ -82,23 +107,30 @@ def build_snippet(marker: str, check_param: str, version_param: str, storage_pre
       }}
 
       function refreshOnce(version) {{
+        if (shouldSkipRefresh()) return;
+        var storageKey = routeKey + version;
         try {{
-          if (sessionStorage.getItem(storageKey) === version) return;
-          sessionStorage.setItem(storageKey, version);
+          if (sessionStorage.getItem(storageKey)) return;
+          sessionStorage.setItem(storageKey, '1');
         }} catch (_error) {{
-          // sessionStorage can be unavailable in private or restricted contexts.
+          return; // Without a persistent guard, automatic reload could loop.
         }}
-        var url = new URL(location.href);
+        var url = new URL(entryUrl);
         url.searchParams.set({version_param_js}, version);
         location.replace(url.toString());
       }}
 
       function checkForDeployUpdate() {{
+        if (shouldSkipRefresh()) return;
         var currentSignature = signatureFromDocument(document);
         if (!currentSignature) return;
-        fetch(pageUrl(), {{ cache: 'no-store', credentials: 'same-origin' }})
+        fetch(entryUrl.toString(), {{ cache: 'no-cache', credentials: 'same-origin' }})
           .then(function (response) {{
             if (!response.ok) throw new Error('deploy check failed');
+            var finalUrl = new URL(response.url || entryUrl.toString(), entryUrl);
+            if (finalUrl.origin !== entryUrl.origin || finalUrl.pathname !== entryUrl.pathname) {{
+              throw new Error('deploy check redirected');
+            }}
             return response.text();
           }})
           .then(function (html) {{
@@ -153,35 +185,13 @@ def iter_targets(paths: list[Path], include_extensionless: bool) -> list[Path]:
     return sorted(set(targets))
 
 
-def has_http_equiv(html: str, name: str) -> bool:
-    pattern = r"<meta\s+[^>]*http-equiv\s*=\s*['\"]?" + re.escape(name) + r"['\"]?[^>]*>"
-    return re.search(pattern, html, flags=re.IGNORECASE) is not None
-
-
-def missing_revalidation_meta(html: str) -> list[str]:
-    missing: list[str] = []
-    for name, tag in (
-        ("Cache-Control", REVALIDATION_META[0]),
-        ("Pragma", REVALIDATION_META[1]),
-        ("Expires", REVALIDATION_META[2]),
-    ):
-        if not has_http_equiv(html, name):
-            missing.append(tag)
-    return missing
-
-
 def inject_html(html: str, snippet: str, marker: str) -> tuple[str, str]:
-    insertions = missing_revalidation_meta(html)
-    if marker not in html:
-        insertions.append(snippet)
-
-    if not insertions:
+    if marker in html:
         return html, "unchanged"
     if not re.search(r"</head>", html, flags=re.IGNORECASE):
         return html, "no-head"
 
-    block = "\n".join(insertions)
-    updated = re.sub(r"</head>", block + "\n</head>", html, count=1, flags=re.IGNORECASE)
+    updated = re.sub(r"</head>", lambda match: snippet + "\n" + match.group(0), html, count=1, flags=re.IGNORECASE)
     return updated, "updated"
 
 
@@ -191,13 +201,12 @@ def main() -> int:
     parser.add_argument("--write", action="store_true", help="write changes instead of dry-running")
     parser.add_argument("--include-extensionless", action="store_true", help="also scan extensionless HTML alias files")
     parser.add_argument("--marker", default=DEFAULT_MARKER, help="marker name used in the HTML comment")
-    parser.add_argument("--check-param", default="__deploy_check", help="query parameter used for no-store HTML checks")
     parser.add_argument("--version-param", default="__deploy_v", help="query parameter used for the one-time refresh")
     parser.add_argument("--storage-prefix", default="deploy-refresh:", help="sessionStorage key prefix")
     args = parser.parse_args()
 
     marker_text = f"<!-- {args.marker} -->"
-    snippet = build_snippet(args.marker, args.check_param, args.version_param, args.storage_prefix)
+    snippet = build_snippet(args.marker, args.version_param, args.storage_prefix)
     targets = iter_targets(args.paths, args.include_extensionless)
     if not targets:
         print("No HTML targets found.", file=sys.stderr)

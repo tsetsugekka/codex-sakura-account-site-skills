@@ -1,157 +1,27 @@
-# Deploy Refresh Pattern
+# Static deploy cache and refresh pattern
 
-## What the script does
+## HTTP contract and verification
 
-The deploy refresh script solves the stale-entry problem common to static sites with hashed assets:
+Set cache headers in the server/CDN rule that serves each response. HTML `http-equiv` tags cannot prove the response policy. Match only known fingerprinted JS/CSS from the build manifest or a verified filename pattern; a blanket extension rule also catches mutable fixed-name files. Keep data, API, authenticated content, and server-generated files on their own policies.
 
-1. A visitor has an old `index.html` in the browser.
-2. A deploy uploads new hashed JS/CSS and then a new `index.html`.
-3. The old page is still running and may continue displaying old styles.
-4. The inline check fetches the live entry HTML with `cache: no-store`.
-5. It extracts same-origin JS/CSS URLs from both documents.
-6. If the signatures differ, it reloads once with a query parameter such as `__deploy_v=<hash>`.
-7. After the refreshed page loads, it removes `__deploy_v` from the address bar with `history.replaceState` without causing another reload.
+| Response | Expected `Cache-Control` | Reason |
+| --- | --- | --- |
+| Entry HTML and HTML aliases | `no-cache` | Revalidate before reusing stored HTML; validators can yield `304`. |
+| Verified fingerprinted JS/CSS | `public, max-age=31536000, immutable` | A changed file gets a different URL. |
+| Fixed-name assets, data, API, auth | Site-specific | They are not eligible for the fingerprint rule. |
 
-The bundled script runs one check after startup. It is not a replacement for hashed filenames, a continuous monitor for an already-open page, or a check that generated body/data changed.
+Inspect real GET or HEAD responses for representative direct URLs, including gzip/Brotli responses and an alias. If the server provides an `ETag` or `Last-Modified`, repeat with `If-None-Match` or `If-Modified-Since` and confirm the conditional response is valid; a `304` has no new body. Then fetch normally and confirm the HTML references the uploaded asset names and the body/other data is current. Query-busted requests alone do not test ordinary cache behavior. If a service worker intercepts navigation or assets, inspect its cache policy before changing it.
 
-## HTML metadata
+## Optional startup check
 
-Entry HTML should include:
+Use the bundled injector only when a one-time check for an already loaded static page is part of the site's behavior. Add it in the source template or deploy-preparation stage before `</head>`; include aliases only if the server actually serves them as HTML. The default marker `<!-- DEPLOY_REFRESH_CHECK_V1 -->` makes insertion idempotent. Already marked pages are not rewritten, so update an older embedded check in its authoritative template/generator and avoid parallel checks.
 
-```html
-<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-```
+The check uses the original navigation URL, not a later `pushState` alias. It removes its own version parameter before revalidating with `fetch` cache mode `no-cache`, allowing a conditional request and a `304`-backed browser body. It compares same-origin script and stylesheet URLs, ignoring third-party files. On a change it reloads once with `__deploy_v=<short-hash>`, then removes that visible parameter with `history.replaceState`. Before reload it confirms the current URL still matches the original route and business query after ignoring the deploy parameter and hash. `sessionStorage` records each target signature separately for that route/query, so alternating responses cannot trigger repeated reloads. If the user has interacted, an edit control is active, the tab is hidden, or storage fails, it leaves the page alone. It never retries on a timer or adds an update prompt. The check does not detect changed file contents at a fixed URL, body-only updates, or JSON changes.
 
-Use HTML revalidation as the default. Avoid `no-store` as the broad page policy because it disables useful caching even when a page has not changed.
+## Staging, merge, and retention
 
-## Injection point
+Upload new fingerprinted assets before HTML/aliases. Keep deployment whitelists explicit; local mock JSON and generated `dist/` data are not automatically publishable. Do not include live data, credentials, account files, or internal documentation. Regenerate compressed HTML/assets with their source and inspect the response actually served.
 
-Inject before `</head>` and make the injection idempotent:
+If cron or server scripts own marked HTML regions (for example SEO text or latest-run summaries), fetch the current live HTML immediately before staging, copy those regions into the new HTML, and stop on absent or ambiguous markers. Do not overwrite live-owned regions from an old local template.
 
-```js
-function injectDeployRefreshCheck(html) {
-  const marker = '<!-- DEPLOY_REFRESH_CHECK_V1 -->';
-  if (html.includes(marker)) return html;
-  if (!/<\/head>/i.test(html)) return html;
-  return html.replace(/<\/head>/i, `${DEPLOY_REFRESH_SNIPPET}\n</head>`);
-}
-```
-
-Prefer patching the deploy-preparation script so generated deploy packages always include the snippet. Direct HTML injection is acceptable for simple static pages without a build step.
-
-## Alias pages
-
-If a deploy helper generates route aliases such as extensionless files, inject the refresh check into aliases too. The checker should fetch:
-
-- `pathname + "index.html"` when the URL path ends with `/`,
-- the current path itself for extensionless aliases.
-
-This lets `/section/` and `/section/topic` both compare the correct live entry HTML.
-
-## Asset signature
-
-Compare only same-origin JavaScript and stylesheet URLs:
-
-```js
-document.querySelectorAll('script[src],link[rel~="stylesheet"][href]')
-```
-
-Normalize each URL to `pathname + search`, ignore cross-origin URLs, sort, and join with `|`. Do not include third-party analytics, fonts, or CDN files in the signature.
-
-## One-time reload guard
-
-Use `sessionStorage` keyed by the current path. Save the target version before reloading:
-
-```js
-sessionStorage.setItem('deploy-refresh:' + location.pathname, version);
-```
-
-If the same version was already attempted, do not reload again. This prevents loops when a proxy or server returns unexpected HTML.
-
-## Cleaning the version parameter
-
-The refreshed page should not leave deploy-only query parameters visible. On startup, remove `__deploy_v` from the current URL with `history.replaceState` before scheduling the next deploy check:
-
-```js
-function cleanDeployVersionParam() {
-  try {
-    var url = new URL(location.href);
-    if (!url.searchParams.has('__deploy_v')) return;
-    url.searchParams.delete('__deploy_v');
-    if (history && history.replaceState) {
-      history.replaceState(history.state, document.title, url.toString());
-    }
-  } catch (_error) {}
-}
-```
-
-This must not reload the page or clear the `sessionStorage` guard. If a project already shipped a different deploy-version parameter, also remove that legacy parameter for compatibility.
-
-## Publish order
-
-Upload in this order:
-
-1. new hashed `assets/*`,
-2. any static non-data files,
-3. route aliases if used,
-4. `index.html` last.
-
-After verifying the live page, clean old hashed assets only with a retention rule that keeps the current generation and one previous generation. Never clean production JSON or scraper/cron data as part of this skill.
-
-## Sakura asset retention
-
-For Sakura static hosting, keep remote storage bounded without breaking rollback:
-
-1. Work one page at a time, scoped to that page's `assets/` directory.
-2. Read the current live entry HTML and collect the asset filenames it references.
-3. List remote asset files with timestamps, sizes, and names.
-4. Identify the current deploy generation from the live HTML references.
-5. Identify the immediately previous deploy generation by timestamp cluster or a saved manifest.
-6. Dry-run deletion of all older hashed assets.
-7. Apply only if the delete list contains older assets from that page's `assets/` directory.
-8. Run a follow-up dry-run and expect no remaining delete candidates.
-
-Do not delete:
-
-- assets referenced by current live HTML,
-- the previous generation kept for rollback,
-- production JSON, server cache files, cron output, or account/data directories,
-- shared files outside the page's asset directory.
-
-## Protected live data
-
-Deploy packages should be whitelist based. Exclude live server outputs unless the task explicitly asks to recover or migrate those files from a trusted live baseline.
-
-Common protected examples:
-
-- `data.json`,
-- `news.json`,
-- per-day data folders,
-- account snapshots,
-- generated narrative/status JSON,
-- server cache files,
-- market history files,
-- cron-generated public data.
-
-If a frontend build emits local mock JSON into `dist/`, do not upload it by default.
-
-## Cron-managed HTML regions
-
-Some projects let cron or server scripts inject content into entry HTML. Examples include static SEO `<noscript>` blocks, generated rankings, latest-run summaries, and timestamps. Publishing a local build can silently erase those live updates if Codex uploads local `index.html` directly.
-
-Use a merge-before-publish flow:
-
-1. Locate stable markers for server-managed regions, such as `<!-- STATIC_SEO_START -->` and `<!-- STATIC_SEO_END -->`.
-2. Fetch the current live HTML from Sakura before preparing the final deploy HTML.
-3. Extract marked regions from live HTML.
-4. Replace the corresponding regions in the new deploy HTML.
-5. Preserve or inject the deploy refresh check after the merge.
-6. Abort if the live marker exists but the local marker is missing, or if either boundary is ambiguous.
-
-This keeps new UI assets and styles while preserving server-generated content.
-
-## Service workers
-
-If a project has a service worker, first check whether it intercepts entry HTML or asset requests. Do not add broad service worker changes unless the stale-style issue is proven to involve the service worker.
+After confirming the new live HTML and assets, scope cleanup to that page's asset directory. Enumerate every still-live HTML owner of that directory: main entry, independent entry/detail templates, route aliases, and permanent archived detail pages, including older pages that are not rebuilt by a routine deploy. Read their current server copies or a trusted complete manifest. Keep the complete current and immediately previous deploy generations, then add every asset still reachable from those HTML references, including imported JS/CSS chunks identified through the build manifest or equivalent dependency evidence. Review a dry-run delete list and delete only identified older fingerprinted assets outside that keep set. If an HTML owner or referenced asset is missing, a dependency graph is incomplete, or generations cannot be identified reliably, stop cleanup. Never include JSON, caches, cron output, account data, or shared assets in cleanup.
