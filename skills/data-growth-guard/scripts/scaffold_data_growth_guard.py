@@ -48,6 +48,7 @@ def wrapper_text(
     python_command: str,
     span_warn_days: int,
     retention_days: int,
+    date_fields: list[str] | None = None,
 ) -> str:
     return f"""#!/bin/sh
 set -u
@@ -75,7 +76,7 @@ TEMP_REPORT="$STATE_DIR/.report.tmp.$$"
   --state "$STATE_FILE" \
   --span-warn-days {span_warn_days} \
   --retention-days {retention_days} \
-  --format markdown > "$TEMP_REPORT" 2>&1
+  {' '.join('--date-field ' + shell_value(field) for field in (date_fields or []))} --format markdown > "$TEMP_REPORT" 2>&1
 STATUS=$?
 
 if [ "$STATUS" -eq 0 ] || [ "$STATUS" -eq 10 ]; then
@@ -121,6 +122,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--hour", type=int, choices=range(0, 24), default=4)
     parser.add_argument("--span-warn-days", type=int, default=40)
     parser.add_argument("--retention-days", type=int, default=365 * 3)
+    parser.add_argument("--date-field", action="append", default=[],
+                        help="Verified JSON record-time field; repeat if needed, otherwise discovery-only")
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--force", action="store_true",
                         help="Overwrite generated files after reviewing/backing them up")
@@ -180,6 +183,7 @@ def main(argv: list[str] | None = None) -> int:
             args.python_command,
             max(0, args.span_warn_days),
             max(1, args.retention_days),
+            args.date_field,
         ),
         0o700,
     )

@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Observe dated files and report evidence of unbounded accumulation.
+"""Observe dated files and report record-date growth signals.
 
 The checker does not use absolute size as the verdict. It compares observations:
-an advancing oldest record is a sliding window, while a pinned oldest record plus
-material byte growth is an accumulator. Period-named shards are already bounded
+an advancing oldest record suggests a sliding window, while a pinned oldest record
+plus material byte growth is an accumulation signal, not proof of no ceiling.
+Unrestricted text dates are discovery hints only. Use --date-field after verifying
+the JSON field denotes record time (not quotes, initialization or scheduled events).
+Period-named shards are already bounded
 per file and are excluded from this particular check.
 
 Exit codes:
-  0  no confirmed accumulator
- 10  one or more confirmed accumulators
+  0  no record-date accumulation signal (see unverified files in the report)
+ 10  one or more record-date accumulation signals
   2  checker/configuration failure
 """
 
@@ -50,9 +53,17 @@ def days_between(earlier: str, later: str) -> int:
     return (parse_iso_date(later) - parse_iso_date(earlier)).days
 
 
-def dates_in(chunk: bytes) -> list[date]:
+def dates_in(chunk: bytes, date_fields: tuple[str, ...] = ()) -> list[date]:
     found: list[date] = []
-    for year, month, day in ISO_DATE_RE.findall(chunk):
+    if date_fields:
+        keys = b"|".join(re.escape(json.dumps(key, ensure_ascii=False).encode("utf-8"))
+                          for key in date_fields)
+        # Only standalone JSON string fields, never escaped quotes inside text.
+        pattern = re.compile(rb'(?<![\\\w])(?:' + keys + rb')\s*:\s*"(20\d{2}-[01]\d-[0-3]\d)(?=[T "])[^"\\]*"')
+        matches = [ISO_DATE_RE.fullmatch(value).groups() for value in pattern.findall(chunk)]
+    else:
+        matches = ISO_DATE_RE.findall(chunk)
+    for year, month, day in matches:
         try:
             found.append(date(int(year), int(month), int(day)))
         except ValueError:
@@ -60,7 +71,7 @@ def dates_in(chunk: bytes) -> list[date]:
     return found
 
 
-def sample_dates(path: Path, size: int) -> tuple[date, date] | None:
+def sample_dates(path: Path, size: int, date_fields: tuple[str, ...] = ()) -> tuple[date, date] | None:
     """Sample recognizable ISO dates from a regular file's head and tail."""
     try:
         with path.open("rb") as handle:
@@ -73,13 +84,13 @@ def sample_dates(path: Path, size: int) -> tuple[date, date] | None:
     except OSError:
         return None
 
-    found = [item for chunk in chunks for item in dates_in(chunk)]
+    found = [item for chunk in chunks for item in dates_in(chunk, date_fields)]
     if len(found) < MIN_RECOGNIZABLE_DATES:
         return None
     return min(found), max(found)
 
 
-def scan_root(root: Path, min_bytes: int) -> tuple[list[dict[str, Any]], dict[str, int]]:
+def scan_root(root: Path, min_bytes: int, date_fields: tuple[str, ...] = ()) -> tuple[list[dict[str, Any]], dict[str, int]]:
     items: list[dict[str, Any]] = []
     counts = {
         "regular": 0,
@@ -113,7 +124,7 @@ def scan_root(root: Path, min_bytes: int) -> tuple[list[dict[str, Any]], dict[st
             if size < min_bytes:
                 counts["small"] += 1
                 continue
-            sampled = sample_dates(path, size)
+            sampled = sample_dates(path, size, date_fields)
             if sampled is None:
                 counts["undated_or_unsampled"] += 1
                 continue
@@ -127,6 +138,7 @@ def scan_root(root: Path, min_bytes: int) -> tuple[list[dict[str, Any]], dict[st
                 "oldest": oldest.isoformat(),
                 "newest": newest.isoformat(),
                 "span_days": (newest - oldest).days,
+                "date_basis": list(date_fields),
             })
 
     return sorted(items, key=lambda item: item["size"], reverse=True), counts
@@ -180,7 +192,8 @@ def atomic_save_state(path: Path, state: dict[str, Any], today: date) -> None:
 
 def observe(state: dict[str, Any], item: dict[str, Any], today: date) -> list[dict[str, Any]]:
     entry = state.setdefault("files", {}).setdefault(item["path"], {})
-    history = entry.get("observations", [])
+    basis = item.get("date_basis", [])
+    history = entry.get("observations", []) if entry.get("date_basis") == basis else []
     if not isinstance(history, list):
         history = []
     today_iso = today.isoformat()
@@ -199,6 +212,7 @@ def observe(state: dict[str, Any], item: dict[str, Any], today: date) -> list[di
     valid_history.append(current)
     entry["observations"] = valid_history[-STATE_KEEP:]
     entry["seen"] = today_iso
+    entry["date_basis"] = basis
     return entry["observations"]
 
 
@@ -211,6 +225,8 @@ def judge(
     min_growth_mib_per_month: float,
     retention_days: int,
 ) -> dict[str, Any]:
+    if not item.get("date_basis") or item["newest"] > str(history[-1]["at"]):
+        return {"verdict": "unverified"}
     if item["span_days"] < span_warn_days:
         return {"verdict": "short"}
 
@@ -235,6 +251,10 @@ def judge(
             "baseline_at": baseline["at"],
         }
 
+    compared = [past for past in history if str(past["at"]) >= str(baseline["at"])]
+    if any(str(past["oldest"]) != item["oldest"] for past in compared):
+        return {"verdict": "changed", "baseline_at": baseline["at"], "elapsed_days": elapsed}
+
     gained_bytes = item["size"] - int(baseline["size"])
     gained_mib = gained_bytes / 1048576
     per_month = gained_mib / (elapsed / 30.44)
@@ -245,7 +265,7 @@ def judge(
         "gained_mib": gained_mib,
         "growth_mib_per_month": per_month,
     }
-    if per_month < min_growth_mib_per_month:
+    if gained_bytes <= 0 or per_month < min_growth_mib_per_month:
         return {"verdict": "steady", **common}
     return {
         "verdict": "accumulating",
@@ -255,7 +275,7 @@ def judge(
 
 
 def summarize_verdicts(records: list[dict[str, Any]]) -> dict[str, int]:
-    counts = {name: 0 for name in ("short", "watching", "sliding", "steady", "accumulating")}
+    counts = {name: 0 for name in ("short", "watching", "sliding", "steady", "accumulating", "unverified", "changed")}
     for record in records:
         counts[record["verdict"]] += 1
     return counts
@@ -282,7 +302,9 @@ def markdown_report(report: dict[str, Any], limit: int) -> str:
         "",
         "| Classification | Count |",
         "| --- | ---: |",
-        f"| Confirmed accumulating | {verdicts['accumulating']} |",
+        f"| Record-date growth signals | {verdicts['accumulating']} |",
+        f"| Unverified date semantics / future dates | {verdicts['unverified']} |",
+        f"| Changing oldest date; review backfill/window | {verdicts['changed']} |",
         f"| Sliding windows | {verdicts['sliding']} |",
         f"| Steady/shrinking | {verdicts['steady']} |",
         f"| Waiting for baseline | {verdicts['watching']} |",
@@ -290,13 +312,13 @@ def markdown_report(report: dict[str, Any], limit: int) -> str:
         f"| Explicit period shards skipped | {scan.get('period_shard', 0)} |",
         f"| Large undated/unsampled files | {scan.get('undated_or_unsampled', 0)} |",
         "",
-        "## Confirmed accumulation",
+        "## Record-date growth signals",
         "",
     ]
     findings = [record for record in report["records"] if record["verdict"] == "accumulating"]
     findings.sort(key=lambda record: record.get("projected_mib", 0), reverse=True)
     if not findings:
-        lines.append("No confirmed accumulator in this observation.")
+        lines.append("No record-date accumulation signal in this observation; review unverified files separately.")
     else:
         lines.extend([
             "| File | Current MiB | Span | Oldest | Growth MiB/month | Projected MiB |",
@@ -309,7 +331,7 @@ def markdown_report(report: dict[str, Any], limit: int) -> str:
                 f"{item['projected_mib']:.0f} |"
             )
         if len(findings) > limit:
-            lines.append(f"\n... and {len(findings) - limit} more confirmed findings.")
+            lines.append(f"\n... and {len(findings) - limit} more record-date growth signals.")
 
     lines.extend(["", "## Sampled files by verdict", ""])
     observed = sorted(
@@ -338,9 +360,10 @@ def markdown_report(report: dict[str, Any], limit: int) -> str:
         "",
         "## Interpretation",
         "",
-        "A finding means the sampled oldest record stayed pinned while the file grew materially. "
-        "Split it by period, shorten its retained window, or replace it with a bounded projection. "
-        "Period shards and undated/binary formats still require a separate architecture review.",
+        "A signal means selected record-date fields stayed pinned across sampled observations while bytes grew. "
+        "Verify the writer, pruning rule, key/count bounds and intervening size peaks before concluding there is no ceiling. "
+        "Unrestricted text dates cannot confirm record age. Projection is conditional linear extrapolation, "
+        "not configured retention, automatic cleanup, or a forecast. Period shards and unsampled records need separate review.",
         "",
     ])
     return "\n".join(lines)
@@ -353,6 +376,7 @@ def text_report(report: dict[str, Any], limit: int) -> str:
         f"sampled={sum(verdicts.values())} "
         f"short={verdicts['short']} watching={verdicts['watching']} "
         f"sliding={verdicts['sliding']} steady={verdicts['steady']} "
+        f"unverified={verdicts['unverified']} changed={verdicts['changed']} "
         f"reported={verdicts['accumulating']}",
     ]
     findings = [record for record in report["records"] if record["verdict"] == "accumulating"]
@@ -364,6 +388,7 @@ def text_report(report: dict[str, Any], limit: int) -> str:
             f"+{item['growth_mib_per_month']:.2f}MiB/month "
             f"projected={item['projected_mib']:.0f}MiB {item['path']}"
         )
+    lines.append("[data-growth] projection is conditional, not retention/cleanup; verify writer bounds before migration")
     lines.extend(f"[data-growth] warning: {warning}" for warning in report["warnings"])
     return "\n".join(lines) + "\n"
 
@@ -375,6 +400,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--state", type=Path, required=True,
                         help="Private observation state outside every scanned root")
     parser.add_argument("--format", choices=("text", "markdown", "json"), default="text")
+    parser.add_argument("--date-field", action="append", default=[],
+                        help="Verified JSON record-time field name; repeat for equivalent fields. Without this, dates are discovery hints only")
     parser.add_argument("--min-mib", type=float, default=1.0)
     parser.add_argument("--span-warn-days", type=int, default=40)
     parser.add_argument("--min-observe-days", type=int, default=14)
@@ -400,10 +427,12 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
     state, warnings = load_state(state_path)
+    state["schemaVersion"] = 2
     all_items: list[dict[str, Any]] = []
     scan_counts: dict[str, int] = {}
+    date_fields = tuple(sorted(set(args.date_field)))
     for root in roots:
-        items, counts = scan_root(root, max(0, int(args.min_mib * 1048576)))
+        items, counts = scan_root(root, max(0, int(args.min_mib * 1048576)), date_fields)
         all_items.extend(items)
         merge_counts(scan_counts, counts)
 
@@ -427,7 +456,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     report = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "generatedAt": args.as_of.isoformat(),
         "roots": [str(root) for root in roots],
         "state": str(state_path),

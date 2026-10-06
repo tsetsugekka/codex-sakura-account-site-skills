@@ -51,6 +51,8 @@ It creates:
 
 The generator refuses overlapping public/state/script roots and refuses to overwrite existing files unless `--force` is explicitly supplied. Do not use `--force` until the existing guard has been reviewed and backed up.
 
+Both scaffold and checker accept repeated `--date-field recorded_at` options. Choose verified JSON record-time fields for the scan scope; fields with different meanings or schemas need separate scans or adapters. Omitting this option intentionally generates a discovery-only guard: text dates appear as `unverified` without growth notifications. Upgrading an existing guard therefore requires reviewing its date source, regenerating the wrapper if needed and allowing a fresh baseline, not merely replacing the checker and assuming alert coverage is unchanged.
+
 ## 3. Wrapper contract
 
 The generated wrapper:
@@ -80,7 +82,7 @@ The generated `cron.example` defaults to Sunday at 04:00 local server time. Conf
 
 Notify on:
 
-- status `10`: confirmed accumulation;
+- status `10`: selected-record-date accumulation signal (verify bounds before migration);
 - status `2` or another unexpected non-zero status: checker failure.
 
 Do not notify on:
@@ -91,8 +93,10 @@ Do not notify on:
 - sliding window;
 - steady file;
 - lock skip.
+- unverified dates or changing oldest dates; keep these visible in the report and review the monitoring coverage.
 
 Sanitize reports before email. They may contain private server paths even though the checker source is public-safe.
+Do not attach unrelated normal log lines merely because they contain `failed` or `error`; zero failure counts are not failures.
 
 ## 5. Validation
 
@@ -110,6 +114,7 @@ Test in a temporary directory before production integration:
 10. Broken JSON state starts a new baseline but emits a visible warning.
 
 Run `python3 -m py_compile` and the repository's tests after changing the scripts.
+Run the bundled regression suite with `python3 -B scripts/test_check_data_growth.py`. It also checks quoted dates, no-field discovery, future record dates, changing oldest dates, state re-baselining and generated wrapper field forwarding. These tests do not verify any live server or scheduler.
 
 ## 6. Recovery and maintenance
 

@@ -45,6 +45,7 @@ Run the bundled checker from a private operations directory:
 python3 scripts/check_data_growth.py \
   --root /path/to/approved/data \
   --state /path/to/private-state/observations.json \
+  --date-field recorded_at \
   --format markdown
 ```
 
@@ -60,7 +61,11 @@ Important defaults:
 
 Tune thresholds to the project. The reporting span is patience, not a storage recommendation. Shorter windows may be correct for fast-growing data; slow systems may need a longer baseline.
 
-The state file records sizes and sampled oldest/newest ISO dates. It must remain private, mode `0600`, and outside every scanned root. A first run normally reports `watching`, not `accumulating`.
+Verify that `recorded_at` is the actual JSON record-time field before using the example. Repeat `--date-field` only for equivalent fields; split scans/state files when schemas or meanings differ. Field names match at any nesting depth, so a same-named control or nested field requires a project adapter instead. The selector accepts ISO date or datetime strings, not epoch values or escaped JSON key names. It is bounded lexical sampling, not a complete JSON parser.
+
+Without `--date-field`, arbitrary text dates are discovery hints classified `unverified`, never status `10`. This change deliberately prevents old guards from mailing false confirmations; configure a verified field or adapter before relying on unattended alerts. An old-enough baseline alone does not verify date semantics.
+
+The state file records sizes, sampled oldest/newest ISO dates and the date-field selection. It must remain private, mode `0600`, and outside every scanned root. A first record-date run normally reports `watching`, not `accumulating`. Changing fields or upgrading legacy state without field metadata starts a new baseline for that file.
 
 ## 4. Verdicts
 
@@ -68,9 +73,11 @@ The state file records sizes and sampled oldest/newest ISO dates. It must remain
 | --- | --- | --- |
 | `short` | Record span is below the reporting threshold | Keep observing |
 | `watching` | No baseline old enough to judge | Wait for evidence |
-| `sliding` | Oldest sampled date moved forward | Treat as bounded; verify its documented limit |
+| `sliding` | Oldest selected record date moved forward | Verify the writer's window; this alone does not prove a ceiling |
 | `steady` | Oldest date is pinned but size is flat/shrinking or below growth floor | No growth deadline; inspect only if architecture is unclear |
-| `accumulating` | Oldest date is pinned or moved backward and size grew materially | Report, estimate horizon, and design a bound |
+| `accumulating` | Verified record field's oldest date is identical across compared samples and size grew materially | Growth signal: verify writer/pruner, peaks and bounds before migration |
+| `changed` | Oldest date moved backward or changed within the comparison period | Inspect backfill, schema changes and window membership; not pinned accumulation |
+| `unverified` | Text-date discovery only, or selected field contains future dates | No growth hook; verify date semantics/clock and document the coverage gap |
 
 Period-named shards are skipped by the growth checker because the filename itself bounds one file. Still inspect their index, retention, empty-shard cleanup, and total directory growth.
 
@@ -80,7 +87,7 @@ Deliver a report with:
 
 1. scope, time, thresholds, and state age;
 2. confirmed accumulating files;
-3. measured MiB/month and projected size at retention;
+3. measured MiB/month and conditional projected size at a stated horizon, independently of actual retention;
 4. bounded sliding windows and period shards;
 5. files still waiting for a baseline;
 6. files ignored because they are small, undated, binary, compressed, or explicitly excluded;
@@ -128,4 +135,10 @@ The bundled checker samples ISO dates from the head and tail of regular files. I
 - a directory can grow without any single file growing, so shard count and retention also need inspection;
 - a period shard can be too large for practical reads even though it is bounded.
 
-Add a project-specific adapter instead of weakening the generic checker when these formats matter.
+Add a project-specific adapter instead of weakening the generic checker when these formats matter. Even field-based samples can miss middle records; they remain signals, not proof that no ceiling exists.
+
+## False-positive case: quoted dates in a working cache
+
+A monitored cache produced a multi-year span and a multi-year growth projection. Inspection located its oldest ISO date inside a quoted comment, not the record timestamp; another text quote contained a future date. The writer kept a current working set plus recently active keys, and observations included a size peak larger than the latest sample. Generic date sampling had conflated prose with retained history, while comparing only endpoints hid the cache's fluctuations.
+
+The fix is to verify record-time fields and the actual writer/prune contract, retain unrelated body text unchanged, and classify free-text dates as unverified. Do not repartition or truncate a bounded cache solely because of this alert. Tests cover quoted old/future dates, real pinned growth, backward/mixed dates and re-baselining. The projection horizon never implied automatic cleanup.

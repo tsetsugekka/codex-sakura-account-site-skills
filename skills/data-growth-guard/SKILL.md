@@ -11,7 +11,7 @@ Use this skill to answer three related questions:
 2. How should a persistent guard observe and report that risk?
 3. How should the data be reorganized so authoritative history, private state, and frontend reads stay bounded and understandable?
 
-Do not equate a large file with an unbounded file. The decisive evidence is that the oldest retained record stays pinned while the file keeps gaining bytes across observations.
+Do not equate a large file with an unbounded file. Verify the record-time field and writer's time/count/key bounds first. A pinned oldest record plus byte growth is a signal to investigate, not proof of no ceiling; dates quoted in text are not record dates.
 
 ## Select the workflow
 
@@ -20,8 +20,8 @@ Do not equate a large file with an unbounded file. The decisive evidence is that
 1. Read [references/growth-audit-runbook.md](references/growth-audit-runbook.md).
 2. Confirm the authorized roots and whether each is public or private. Never widen an SSH or filesystem scope merely to make discovery easier.
 3. Inventory existing retention, shards, snapshots, indexes, caches, logs, cron jobs, locks, and state files before running a new scanner.
-4. Run `scripts/check_data_growth.py` against each approved root with a state file outside every scanned/public root.
-5. Treat the first run as a baseline, not proof. Report confirmed accumulation only after an old-enough baseline exists.
+4. Run `scripts/check_data_growth.py` against each approved root with a state file outside every scanned/public root. Default text-date sampling is discovery only; pass `--date-field` only after verifying equivalent JSON record-time fields for that scope.
+5. Treat the first run as a baseline, not proof. Confirm an accumulation signal against the writer/pruner, multiple observations and size fluctuations before calling it unbounded. See the runbook's false-positive case.
 6. Deliver a Markdown report that separates confirmed findings, bounded windows, period shards, steady files, files still being watched, and blind spots.
 
 For a server, prefer executing the public-safe checker remotely from a private operations directory. Alternatively, scan a mounted or safely exported directory. Do not copy credentials, private records, or full data dumps into the skill repository.
@@ -33,7 +33,7 @@ For a server, prefer executing the public-safe checker remotely from a private o
 3. Dry-run `scripts/scaffold_data_growth_guard.py`; review the exact output paths and cron line.
 4. Generate the checker, wrapper, and cron example with `--write` only after confirming that the script and state directories are private and outside the scan root.
 5. Test baseline, confirmed-growth, sliding-window, lock-skip, broken-state, and notification paths.
-6. Keep the guard non-blocking: a growth finding reports status `10` but must not stop the site's primary crawler or publishing job.
+6. Keep the guard non-blocking: a record-date growth signal reports status `10` but must not stop the site's primary crawler or publishing job. Unverified text dates do not trigger growth hooks; report that coverage gap.
 
 ### Design or migrate the data architecture
 
@@ -50,8 +50,10 @@ For a server, prefer executing the public-safe checker remotely from a private o
 - Compare against a baseline old enough to measure a trend.
 - Classify an advancing oldest date as a sliding window, even if the file is currently filling and becoming larger.
 - Classify a pinned oldest date with insignificant or negative growth as steady, not accumulating.
+- A backward or inconsistent oldest date is `changed`, not pinned. A future record date is `unverified`; investigate field selection, quotes or clock semantics.
+- Re-baseline when date-field selection changes; do not mix legacy text-date samples with record-time observations.
 - Exempt filenames that are already explicit period shards such as `YYYY-MM.json` and `YYYY-MM-DD.json`; audit their directory/index design separately.
-- Measure actual byte growth over actual elapsed time and show the projected size at the selected retention horizon.
+- Measure actual byte growth over actual elapsed time. A projection is a conditional linear estimate, not configured retention, promised cleanup or a forecast. Check intervening peaks and writer bounds before recommending migration.
 - State sampling limits. ISO-date sampling cannot prove that binary databases, compressed archives, unsorted records, or files without recognizable dates are bounded.
 - Never delete, truncate, repartition, upload, or change cron while performing an audit-only request.
 
@@ -82,7 +84,7 @@ The bundled checker observes eligible single files, not total storage health. Da
 - Do not claim that a file is unbounded from one size reading or one date span.
 - Do not bypass access controls to inspect a server. Use existing authorized SSH, mounted storage, control-panel export, or user-provided evidence.
 - Do not install a second scheduler when an existing wrapper can safely invoke the checker.
-- Do not send a success email every run. Notify only on confirmed growth or checker failure, using sanitized output.
+- Do not send a success email every run. Notify only on record-date growth signals or checker failure, using sanitized output. Select real failures by exit status or non-zero failure counts; a log line containing `failed=0` is not an error.
 
 ## Resources
 
