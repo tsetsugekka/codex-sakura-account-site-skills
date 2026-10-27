@@ -18,6 +18,26 @@ Declare UTF-8 within the first 1024 bytes of `<head>`. Put the core metadata bef
 
 Pages without a suitable image should use `twitter:card=summary` and omit `og:image`/`twitter:image`. Do not add a favicon or placeholder solely to force a picture. This is an intentional text-only degradation, not a guarantee that every client will render the title and description: the Open Graph basic object includes `og:image`, and clients are free to show a more compact link when it is absent.
 
+## Initial Response Size and Deferred Data
+
+Keep the agreed indexable body and necessary summaries in initial HTML. Full JSON catalogs, offscreen details, unopened panels, and long histories need not be embedded merely to initialize the application. Choose a useful initial window for the page and keep the remaining content accessible; do not infer a universal byte or record limit from one failure.
+
+Serve deferred data from the existing source or generation pipeline. Its read endpoint must enforce the same page authorization and expose only the fields needed for display, without account state, tokens, or unused maintenance fields. Preserve complete search, filters, sorting, stable detail links, no-JavaScript behavior where promised, and visible loading/error recovery. Moving a private file to a public static URL is not an authorization-preserving split.
+
+Measure initial HTML and separate data responses independently:
+
+- distinguish wire bytes, decompressed bytes, and parsing/rendering cost; gzip reduces transfer size but does not reduce the decoded document or prove that a preview parser accepts it;
+- verify actual `Content-Encoding`, MIME, `Vary: Accept-Encoding`, and equivalent decoded content for compressed and ordinary responses;
+- keep existing private/no-store policies and authorization; compression does not require public caching;
+- scope compression and output buffering by response type so ordinary HTML handling does not delay event streams or newline-delimited streaming answers;
+- retain useful visible content and truthful data freshness; CSS hiding alone does not defer fetching or parsing.
+
+## Failure Classification and Cached Results
+
+HTTP 200 and present metadata establish part of the response contract, not complete receipt or parsing by another service. Separate access/redirect failures, metadata errors, original document size, transfer encoding, and a platform's cached result. Use available evidence before naming a root cause; do not add crawler-specific content, false schema types, or arbitrary size thresholds.
+
+Platforms may retain failed as well as successful previews, and may normalize query parameters. A temporary query can help distinguish cached results but cannot guarantee refetching or establish a cache lifetime. Keep permanent canonical and `og:url` stable, and report delivery changes separately from any unconfirmed cache explanation. For a text-only request, fix the title, description, and HTML response without adding an image-preview workstream.
+
 ## Image Cards
 
 For a real preview image:
